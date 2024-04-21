@@ -1,370 +1,192 @@
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/ERC20.sol)
+// SPDX-License-Identifier: AGPL-3.0-only
+pragma solidity >=0.8.0;
 
-pragma solidity ^0.8.20;
+/// @notice Modern and gas efficient ERC20 + EIP-2612 implementation.
+/// @author Solmate (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
+/// @author Modified from Uniswap (https://github.com/Uniswap/uniswap-v2-core/blob/master/contracts/UniswapV2ERC20.sol)
+/// @dev Do not manually set balances without updating totalSupply, as the sum of all user balances must not exceed it.
+abstract contract ERC20 {
+    /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
 
-import {IERC20} from "./IERC20.sol";
-import {IERC20Metadata} from "./IERC20Metadata.sol";
-import {Context} from "../GSN/Context.sol";
-import {IERC20Errors} from "./draft-IERC6093.sol";
+    event Transfer(address indexed from, address indexed to, uint256 amount);
 
-/**
- * @dev Implementation of the {IERC20} interface.
- *
- * This implementation is agnostic to the way tokens are created. This means
- * that a supply mechanism has to be added in a derived contract using {_mint}.
- *
- * TIP: For a detailed writeup see our guide
- * https://forum.openzeppelin.com/t/how-to-implement-erc20-supply-mechanisms/226[How
- * to implement supply mechanisms].
- *
- * The default value of {decimals} is 18. To change this, you should override
- * this function so it returns a different value.
- *
- * We have followed general OpenZeppelin Contracts guidelines: functions revert
- * instead returning `false` on failure. This behavior is nonetheless
- * conventional and does not conflict with the expectations of ERC20
- * applications.
- *
- * Additionally, an {Approval} event is emitted on calls to {transferFrom}.
- * This allows applications to reconstruct the allowance for all accounts just
- * by listening to said events. Other implementations of the EIP may not emit
- * these events, as it isn't required by the specification.
- *
- * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
- * functions have been added to mitigate the well-known issues around setting
- * allowances. See {IERC20-approve}.
- */
-abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC20Errors {
-    mapping(address => uint256) private _balances;
+    event Approval(address indexed owner, address indexed spender, uint256 amount);
 
-    mapping(address => mapping(address => uint256)) private _allowances;
+    /*//////////////////////////////////////////////////////////////
+                            METADATA STORAGE
+    //////////////////////////////////////////////////////////////*/
 
-    uint256 private _totalSupply;
+    string public name;
 
-    string private _name;
-    string private _symbol;
+    string public symbol;
 
-    /**
-     * @dev Indicates a failed `decreaseAllowance` request.
-     */
-    error ERC20FailedDecreaseAllowance(address spender, uint256 currentAllowance, uint256 requestedDecrease);
+    uint8 public immutable decimals;
 
-    /**
-     * @dev Sets the values for {name} and {symbol}.
-     *
-     * All two of these values are immutable: they can only be set once during
-     * construction.
-     */
-    constructor(string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
+    /*//////////////////////////////////////////////////////////////
+                              ERC20 STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 public totalSupply;
+
+    mapping(address => uint256) public balanceOf;
+
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    /*//////////////////////////////////////////////////////////////
+                            EIP-2612 STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    uint256 internal immutable INITIAL_CHAIN_ID;
+
+    bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
+
+    mapping(address => uint256) public nonces;
+
+    /*//////////////////////////////////////////////////////////////
+                               CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor(string memory _name, string memory _symbol, uint8 _decimals) {
+        name = _name;
+        symbol = _symbol;
+        decimals = _decimals;
+
+        INITIAL_CHAIN_ID = block.chainid;
+        INITIAL_DOMAIN_SEPARATOR = computeDomainSeparator();
     }
 
-    /**
-     * @dev Returns the name of the token.
-     */
-    function name() public view virtual returns (string memory) {
-        return _name;
-    }
+    /*//////////////////////////////////////////////////////////////
+                               ERC20 LOGIC
+    //////////////////////////////////////////////////////////////*/
 
-    /**
-     * @dev Returns the symbol of the token, usually a shorter version of the
-     * name.
-     */
-    function symbol() public view virtual returns (string memory) {
-        return _symbol;
-    }
+    function approve(address spender, uint256 amount) public virtual returns (bool) {
+        allowance[msg.sender][spender] = amount;
 
-    /**
-     * @dev Returns the number of decimals used to get its user representation.
-     * For example, if `decimals` equals `2`, a balance of `505` tokens should
-     * be displayed to a user as `5.05` (`505 / 10 ** 2`).
-     *
-     * Tokens usually opt for a value of 18, imitating the relationship between
-     * Ether and Wei. This is the default value returned by this function, unless
-     * it's overridden.
-     *
-     * NOTE: This information is only used for _display_ purposes: it in
-     * no way affects any of the arithmetic of the contract, including
-     * {IERC20-balanceOf} and {IERC20-transfer}.
-     */
-    function decimals() public view virtual returns (uint8) {
-        return 18;
-    }
+        emit Approval(msg.sender, spender, amount);
 
-    /**
-     * @dev See {IERC20-totalSupply}.
-     */
-    function totalSupply() public view virtual returns (uint256) {
-        return _totalSupply;
-    }
-
-    /**
-     * @dev See {IERC20-balanceOf}.
-     */
-    function balanceOf(address account) public view virtual returns (uint256) {
-        return _balances[account];
-    }
-
-    /**
-     * @dev See {IERC20-transfer}.
-     *
-     * Requirements:
-     *
-     * - `to` cannot be the zero address.
-     * - the caller must have a balance of at least `value`.
-     */
-    function transfer(address to, uint256 value) public virtual returns (bool) {
-        address owner = _msgSender();
-        _transfer(owner, to, value);
         return true;
     }
 
-    /**
-     * @dev See {IERC20-allowance}.
-     */
-    function allowance(address owner, address spender) public view virtual returns (uint256) {
-        return _allowances[owner][spender];
-    }
+    function transfer(address to, uint256 amount) public virtual returns (bool) {
+        balanceOf[msg.sender] -= amount;
 
-    /**
-     * @dev See {IERC20-approve}.
-     *
-     * NOTE: If `value` is the maximum `uint256`, the allowance is not updated on
-     * `transferFrom`. This is semantically equivalent to an infinite approval.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function approve(address spender, uint256 value) public virtual returns (bool) {
-        address owner = _msgSender();
-        _approve(owner, spender, value);
-        return true;
-    }
-
-    /**
-     * @dev See {IERC20-transferFrom}.
-     *
-     * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20}.
-     *
-     * NOTE: Does not update the allowance if the current allowance
-     * is the maximum `uint256`.
-     *
-     * Requirements:
-     *
-     * - `from` and `to` cannot be the zero address.
-     * - `from` must have a balance of at least `value`.
-     * - the caller must have allowance for ``from``'s tokens of at least
-     * `value`.
-     */
-    function transferFrom(address from, address to, uint256 value) public virtual returns (bool) {
-        address spender = _msgSender();
-        _spendAllowance(from, spender, value);
-        _transfer(from, to, value);
-        return true;
-    }
-
-    /**
-     * @dev Atomically increases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     */
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        address owner = _msgSender();
-        _approve(owner, spender, allowance(owner, spender) + addedValue);
-        return true;
-    }
-
-    /**
-     * @dev Atomically decreases the allowance granted to `spender` by the caller.
-     *
-     * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
-     *
-     * Emits an {Approval} event indicating the updated allowance.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     * - `spender` must have allowance for the caller of at least
-     * `requestedDecrease`.
-     *
-     * NOTE: Although this function is designed to avoid double spending with {approval},
-     * it can still be frontrunned, preventing any attempt of allowance reduction.
-     */
-    function decreaseAllowance(address spender, uint256 requestedDecrease) public virtual returns (bool) {
-        address owner = _msgSender();
-        uint256 currentAllowance = allowance(owner, spender);
-        if (currentAllowance < requestedDecrease) {
-            revert ERC20FailedDecreaseAllowance(spender, currentAllowance, requestedDecrease);
-        }
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
         unchecked {
-            _approve(owner, spender, currentAllowance - requestedDecrease);
+            balanceOf[to] += amount;
         }
+
+        emit Transfer(msg.sender, to, amount);
 
         return true;
     }
 
-    /**
-     * @dev Moves a `value` amount of tokens from `from` to `to`.
-     *
-     * This internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
-     *
-     * Emits a {Transfer} event.
-     *
-     * NOTE: This function is not virtual, {_update} should be overridden instead.
-     */
-    function _transfer(address from, address to, uint256 value) internal {
-        if (from == address(0)) {
-            revert ERC20InvalidSender(address(0));
+    function transferFrom(address from, address to, uint256 amount) public virtual returns (bool) {
+        uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
+
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        balanceOf[from] -= amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked {
+            balanceOf[to] += amount;
         }
-        if (to == address(0)) {
-            revert ERC20InvalidReceiver(address(0));
-        }
-        _update(from, to, value);
+
+        emit Transfer(from, to, amount);
+
+        return true;
     }
 
-    /**
-     * @dev Transfers a `value` amount of tokens from `from` to `to`, or alternatively mints (or burns) if `from` (or `to`) is
-     * the zero address. All customizations to transfers, mints, and burns should be done by overriding this function.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _update(address from, address to, uint256 value) internal virtual {
-        if (from == address(0)) {
-            // Overflow check required: The rest of the code assumes that totalSupply never overflows
-            _totalSupply += value;
-        } else {
-            uint256 fromBalance = _balances[from];
-            if (fromBalance < value) {
-                revert ERC20InsufficientBalance(from, fromBalance, value);
-            }
-            unchecked {
-                // Overflow not possible: value <= fromBalance <= totalSupply.
-                _balances[from] = fromBalance - value;
-            }
+    /*//////////////////////////////////////////////////////////////
+                             EIP-2612 LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        public
+        virtual
+    {
+        require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+
+        // Unchecked because the only math done is incrementing
+        // the owner's nonce which cannot realistically overflow.
+        unchecked {
+            address recoveredAddress = ecrecover(
+                keccak256(
+                    abi.encodePacked(
+                        "\x19\x01",
+                        DOMAIN_SEPARATOR(),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                                ),
+                                owner,
+                                spender,
+                                value,
+                                nonces[owner]++,
+                                deadline
+                            )
+                        )
+                    )
+                ),
+                v,
+                r,
+                s
+            );
+
+            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
+
+            allowance[recoveredAddress][spender] = value;
         }
 
-        if (to == address(0)) {
-            unchecked {
-                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
-                _totalSupply -= value;
-            }
-        } else {
-            unchecked {
-                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
-                _balances[to] += value;
-            }
-        }
-
-        emit Transfer(from, to, value);
+        emit Approval(owner, spender, value);
     }
 
-    /**
-     * @dev Creates a `value` amount of tokens and assigns them to `account`, by transferring it from address(0).
-     * Relies on the `_update` mechanism
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * NOTE: This function is not virtual, {_update} should be overridden instead.
-     */
-    function _mint(address account, uint256 value) internal {
-        if (account == address(0)) {
-            revert ERC20InvalidReceiver(address(0));
-        }
-        _update(address(0), account, value);
+    function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
+        return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : computeDomainSeparator();
     }
 
-    /**
-     * @dev Destroys a `value` amount of tokens from `account`, by transferring it to address(0).
-     * Relies on the `_update` mechanism.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * NOTE: This function is not virtual, {_update} should be overridden instead
-     */
-    function _burn(address account, uint256 value) internal {
-        if (account == address(0)) {
-            revert ERC20InvalidSender(address(0));
-        }
-        _update(account, address(0), value);
+    function computeDomainSeparator() internal view virtual returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name)),
+                keccak256("1"),
+                block.chainid,
+                address(this)
+            )
+        );
     }
 
-    /**
-     * @dev Sets `value` as the allowance of `spender` over the `owner` s tokens.
-     *
-     * This internal function is equivalent to `approve`, and can be used to
-     * e.g. set automatic allowances for certain subsystems, etc.
-     *
-     * Emits an {Approval} event.
-     *
-     * Requirements:
-     *
-     * - `owner` cannot be the zero address.
-     * - `spender` cannot be the zero address.
-     */
-    function _approve(address owner, address spender, uint256 value) internal virtual {
-        _approve(owner, spender, value, true);
+    /*//////////////////////////////////////////////////////////////
+                        INTERNAL MINT/BURN LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function _mint(address to, uint256 amount) internal virtual {
+        totalSupply += amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked {
+            balanceOf[to] += amount;
+        }
+
+        emit Transfer(address(0), to, amount);
     }
 
-    /**
-     * @dev Alternative version of {_approve} with an optional flag that can enable or disable the Approval event.
-     *
-     * By default (when calling {_approve}) the flag is set to true. On the other hand, approval changes made by
-     * `_spendAllowance` during the `transferFrom` operation set the flag to false. This saves gas by not emitting any
-     * `Approval` event during `transferFrom` operations.
-     *
-     * Anyone who wishes to continue emitting `Approval` events on the`transferFrom` operation can force the flag to true
-     * using the following override:
-     * ```
-     * function _approve(address owner, address spender, uint256 value, bool) internal virtual override {
-     *     super._approve(owner, spender, value, true);
-     * }
-     * ```
-     *
-     * Requirements are the same as {_approve}.
-     */
-    function _approve(address owner, address spender, uint256 value, bool emitEvent) internal virtual {
-        if (owner == address(0)) {
-            revert ERC20InvalidApprover(address(0));
-        }
-        if (spender == address(0)) {
-            revert ERC20InvalidSpender(address(0));
-        }
-        _allowances[owner][spender] = value;
-        if (emitEvent) {
-            emit Approval(owner, spender, value);
-        }
-    }
+    function _burn(address from, uint256 amount) internal virtual {
+        balanceOf[from] -= amount;
 
-    /**
-     * @dev Updates `owner` s allowance for `spender` based on spent `value`.
-     *
-     * Does not update the allowance value in case of infinite allowance.
-     * Revert if not enough allowance is available.
-     *
-     * Might emit an {Approval} event.
-     */
-    function _spendAllowance(address owner, address spender, uint256 value) internal virtual {
-        uint256 currentAllowance = allowance(owner, spender);
-        if (currentAllowance != type(uint256).max) {
-            if (currentAllowance < value) {
-                revert ERC20InsufficientAllowance(spender, currentAllowance, value);
-            }
-            unchecked {
-                _approve(owner, spender, currentAllowance - value, false);
-            }
+        // Cannot underflow because a user's balance
+        // will never be larger than the total supply.
+        unchecked {
+            totalSupply -= amount;
         }
+
+        emit Transfer(from, address(0), amount);
     }
 }

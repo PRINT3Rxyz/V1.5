@@ -3,9 +3,8 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
-import "../libraries/utils/Address.sol";
 
 import "./interfaces/IRewardTracker.sol";
 import "./interfaces/IBrrrRewardRouter.sol";
@@ -15,8 +14,7 @@ import "../core/interfaces/IBrrrManager.sol";
 import "../access/Governable.sol";
 
 contract BrrrRewardRouter is IBrrrRewardRouter, ReentrancyGuard, Governable {
-    using SafeERC20 for IERC20;
-    using Address for address payable;
+    using SafeTransferLib for *;
 
     bool public isInitialized;
 
@@ -100,7 +98,7 @@ contract BrrrRewardRouter is IBrrrRewardRouter, ReentrancyGuard, Governable {
             uint256 wethAmount = IRewardTracker(stakedBrrrTracker).claimForAccount(account, address(this));
             IWETH(weth).withdraw(wethAmount);
 
-            payable(account).sendValue(wethAmount);
+            account.safeTransferETH(wethAmount);
         } else {
             IRewardTracker(stakedBrrrTracker).claimForAccount(account, account);
         }

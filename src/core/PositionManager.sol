@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "./interfaces/IRouter.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IOrderBook.sol";
@@ -11,7 +11,7 @@ import "../peripherals/interfaces/ITimelock.sol";
 import "./BasePositionManager.sol";
 
 contract PositionManager is BasePositionManager {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     address public orderBook;
     bool public inLegacyMode;

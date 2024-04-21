@@ -32,7 +32,7 @@ contract WETH is ERC20 {
     event Deposit(address indexed account, uint256 amount);
     event Withdraw(address indexed account, uint256 amount);
 
-    constructor() ERC20("Wrapped Ether", "WETH") {}
+    constructor() ERC20("Wrapped Ether", "WETH", 18) {}
 
     receive() external payable {
         deposit();

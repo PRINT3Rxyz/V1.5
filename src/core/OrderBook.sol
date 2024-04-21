@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 import "../access/Governable.sol";
 
@@ -11,8 +11,7 @@ import "./interfaces/IVault.sol";
 import "./interfaces/IOrderBook.sol";
 
 contract OrderBook is ReentrancyGuard, Governable, IOrderBook {
-    using SafeERC20 for IERC20;
-    using Address for address payable;
+    using SafeTransferLib for IERC20;
 
     uint256 public constant PRICE_PRECISION = 1e30;
     uint256 public constant USDP_PRECISION = 1e18;

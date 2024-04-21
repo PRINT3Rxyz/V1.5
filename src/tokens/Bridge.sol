@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
 
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 
 import "../access/Governable.sol";
 
 contract Bridge is ReentrancyGuard, Governable {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     address public token;
     address public wToken;

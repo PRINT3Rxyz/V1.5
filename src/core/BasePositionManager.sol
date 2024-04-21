@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 import "../access/Governable.sol";
 
@@ -16,8 +16,7 @@ import "../peripherals/interfaces/ITimelock.sol";
 import "../referrals/interfaces/IReferralStorage.sol";
 
 contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governable {
-    using SafeERC20 for IERC20;
-    using Address for address payable;
+    using SafeTransferLib for *;
 
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
@@ -144,7 +143,7 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
     }
 
     function sendValue(address payable _receiver, uint256 _amount) external onlyGov {
-        _receiver.sendValue(_amount);
+        _receiver.safeTransferETH(_amount);
     }
 
     function _validateMaxGlobalSize(address _indexToken, bool _isLong, uint256 _sizeDelta) internal view {

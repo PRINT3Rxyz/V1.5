@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 
 import "./interfaces/IDistributor.sol";
@@ -12,7 +12,7 @@ import "./interfaces/IYieldToken.sol";
 
 // code adapated from https://github.com/trusttoken/smart-contracts/blob/master/contracts/truefi/TrueFarm.sol
 contract YieldTracker is IYieldTracker, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     uint256 public constant PRECISION = 1e30;
 

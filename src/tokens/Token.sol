@@ -29,13 +29,9 @@ import "../libraries/token/ERC20.sol";
  * allowances. See {IERC20-approve}.
  */
 contract Token is ERC20 {
-    constructor() ERC20("USD Coin", "USDC") {}
+    constructor() ERC20("USD Coin", "USDC", 6) {}
 
     function mint(address account, uint256 amount) public {
         _mint(account, amount);
-    }
-
-    function decimals() public pure override returns (uint8) {
-        return 6;
     }
 }

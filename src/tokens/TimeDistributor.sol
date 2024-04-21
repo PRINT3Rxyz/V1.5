@@ -3,12 +3,12 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 
 import "./interfaces/IDistributor.sol";
 
 contract TimeDistributor is IDistributor {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     uint256 public constant DISTRIBUTION_INTERVAL = 1 hours;
     address public gov;

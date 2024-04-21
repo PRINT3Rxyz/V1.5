@@ -3,13 +3,13 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 
 import "./interfaces/IYieldTracker.sol";
 import "./interfaces/IYieldToken.sol";
 
 contract YieldToken is IERC20, IYieldToken {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     string public name;
     string public symbol;

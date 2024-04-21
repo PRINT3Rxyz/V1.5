@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.20;
 
-import {IERC20, SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import "../libraries/token/IERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 
 import "./interfaces/IRouter.sol";
 import "./interfaces/IVault.sol";
@@ -16,8 +16,7 @@ import "../peripherals/interfaces/ITimelock.sol";
 import {BasePositionManager} from "./BasePositionManager.sol";
 
 contract PositionRouter is BasePositionManager, IPositionRouter {
-    using SafeERC20 for IERC20;
-    using Address for address;
+    using SafeTransferLib for IERC20;
 
     struct IncreasePositionRequest {
         address account;

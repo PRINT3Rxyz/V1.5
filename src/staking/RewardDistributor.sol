@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC20} from "../libraries/token/IERC20.sol";
-import {SafeERC20} from "../libraries/token/SafeERC20.sol";
+import {SafeTransferLib} from "../libraries/token/SafeTransferLib.sol";
 import {ReentrancyGuard} from "../libraries/utils/ReentrancyGuard.sol";
 
 import {IRewardDistributor} from "./interfaces/IRewardDistributor.sol";
@@ -11,7 +11,7 @@ import {IRewardTracker} from "./interfaces/IRewardTracker.sol";
 import {Governable} from "../access/Governable.sol";
 
 contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     address public override rewardToken;
     uint256 public override tokensPerInterval;

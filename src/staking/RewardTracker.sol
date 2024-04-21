@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import "../libraries/token/IERC20.sol";
-import "../libraries/token/SafeERC20.sol";
+import "../libraries/token/SafeTransferLib.sol";
 import "../libraries/utils/ReentrancyGuard.sol";
 
 import "./interfaces/IRewardDistributor.sol";
@@ -11,7 +11,7 @@ import "./interfaces/IRewardTracker.sol";
 import "../access/Governable.sol";
 
 contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
-    using SafeERC20 for IERC20;
+    using SafeTransferLib for IERC20;
 
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant PRECISION = 1e30;
