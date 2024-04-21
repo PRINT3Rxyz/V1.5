@@ -5,8 +5,8 @@ libs = ["lib"]
 remappings = [
     '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts/',
     "@pythnetwork/pyth-sdk-solidity/=lib/pyth-sdk-solidity/",
-    "@redstone-finance/evm-connector/dist/contracts/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/",
 ]
 solc = "0.8.20"
+runs = 10000
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

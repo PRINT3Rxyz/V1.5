@@ -143,6 +143,11 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         return allWhitelistedTokens.length;
     }
 
+    function setGov(address _gov) external {
+        _onlyGov();
+        gov = _gov;
+    }
+
     function setBrrrManager(address _manager) external override {
         _onlyGov();
         brrrManager = _manager;
@@ -666,6 +671,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         }
 
         uint256 _maxLeverage = getMaxLeverage(_indexToken);
+
         if (remainingCollateral * _maxLeverage < size * BASIS_POINTS_DIVISOR) {
             if (_raise) {
                 revert Vault_MaxLeverageExceeded();

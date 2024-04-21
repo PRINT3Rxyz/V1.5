@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 interface IFastPriceFeed {
-    function pythIds(address token) external view returns (bytes32);
+    error FastPriceFeed_OnlyVaultPriceFeed();
 
     function getUpdateFee(bytes[] calldata priceUpdateData) external view returns (uint256 fee);
 

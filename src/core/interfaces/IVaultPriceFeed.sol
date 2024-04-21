@@ -3,6 +3,8 @@
 pragma solidity ^0.8.20;
 
 interface IVaultPriceFeed {
+    function pythIds(address token) external view returns (bytes32);
+
     function adjustmentBasisPoints(address _token) external view returns (uint256);
 
     function isAdjustmentAdditive(address _token) external view returns (bool);
@@ -27,13 +29,7 @@ interface IVaultPriceFeed {
 
     function getLatestPrimaryPrice(address _token) external view returns (uint256);
 
-    function getPrimaryPrice(address _token) external view returns (uint256);
+    function getPrimaryPrice(address _token, bool _maximize) external view returns (uint256);
 
-    function setTokenConfig(
-        address _token,
-        address _priceFeed,
-        uint256 _priceDecimals,
-        bool _isStrictStable,
-        string calldata _ticker
-    ) external;
+    function setTokenConfig(address _token, uint256 _priceDecimals, bool _isStrictStable, bytes32 _priceId) external;
 }

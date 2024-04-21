@@ -3,17 +3,23 @@
 import "../access/Governable.sol";
 import "./interfaces/IVaultPriceFeed.sol";
 import "../oracle/interfaces/ISecondaryPriceFeed.sol";
-import "lib/redstone-oracles-monorepo/packages/evm-connector/contracts/data-services/MainDemoConsumerBase.sol";
+import "@pythnetwork/pyth-sdk-solidity/IPyth.sol";
+import "@pythnetwork/pyth-sdk-solidity/PythStructs.sol";
+import "../oracle/PythUtils.sol";
 
 pragma solidity ^0.8.20;
 
-contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
+contract VaultPriceFeed is Governable, IVaultPriceFeed {
+    using PythUtils for PythStructs.Price;
+
     uint256 public constant PRICE_PRECISION = 10 ** 30;
     uint256 public constant ONE_USD = PRICE_PRECISION;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant MAX_SPREAD_BASIS_POINTS = 50;
     uint256 public constant MAX_ADJUSTMENT_INTERVAL = 2 hours;
     uint256 public constant MAX_ADJUSTMENT_BASIS_POINTS = 20;
+
+    IPyth public immutable pyth;
 
     bool public isSecondaryPriceEnabled = true;
     bool public useV2Pricing = false;
@@ -23,14 +29,6 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
     address public secondaryPriceFeed;
     uint256 public spreadThresholdBasisPoints = 30;
 
-    address public btc;
-    address public eth;
-    address public bnb;
-    address public bnbBusd;
-    address public ethBnb;
-    address public btcBnb;
-
-    mapping(address => address) public priceFeeds;
     mapping(address => uint256) public priceDecimals;
     mapping(address => uint256) public spreadBasisPoints;
     // Chainlink can return prices for stablecoins
@@ -39,9 +37,7 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
     // this allows us to configure stablecoins like DAI as being a stableToken
     // while not being a strictStableToken
 
-    // Used to fetch tickers from a token address to get prices from redstone oracles
-    // Ideally we don't want to have token addresses at all and just do bytes32 versions of tickers...
-    mapping(address token => string ticker) tokensToTickers;
+    mapping(address token => bytes32 pythId) public pythIds;
 
     mapping(address => bool) public strictStableTokens;
 
@@ -49,7 +45,9 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
     mapping(address => bool) public override isAdjustmentAdditive;
     mapping(address => uint256) public lastAdjustmentTimings;
 
-    constructor() {}
+    constructor(address _pyth) {
+        pyth = IPyth(_pyth);
+    }
 
     function setAdjustment(address _token, bool _isAdditive, uint256 _adjustmentBps) external override onlyGov {
         require(
@@ -74,18 +72,6 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
         secondaryPriceFeed = _secondaryPriceFeed;
     }
 
-    function setTokens(address _btc, address _eth, address _bnb) external onlyGov {
-        btc = _btc;
-        eth = _eth;
-        bnb = _bnb;
-    }
-
-    function setPairs(address _bnbBusd, address _ethBnb, address _btcBnb) external onlyGov {
-        bnbBusd = _bnbBusd;
-        ethBnb = _ethBnb;
-        btcBnb = _btcBnb;
-    }
-
     function setSpreadBasisPoints(address _token, uint256 _spreadBasisPoints) external override onlyGov {
         require(_spreadBasisPoints <= MAX_SPREAD_BASIS_POINTS, "VaultPriceFeed: invalid _spreadBasisPoints");
         spreadBasisPoints[_token] = _spreadBasisPoints;
@@ -108,26 +94,24 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
         maxStrictPriceDeviation = _maxStrictPriceDeviation;
     }
 
-    function setTokenConfig(
-        address _token,
-        address _priceFeed,
-        uint256 _priceDecimals,
-        bool _isStrictStable,
-        string calldata _ticker
-    ) external override onlyGov {
-        priceFeeds[_token] = _priceFeed;
+    function setTokenConfig(address _token, uint256 _priceDecimals, bool _isStrictStable, bytes32 _pythId)
+        external
+        override
+        onlyGov
+    {
         priceDecimals[_token] = _priceDecimals;
         strictStableTokens[_token] = _isStrictStable;
-        tokensToTickers[_token] = _ticker;
+        pythIds[_token] = _pythId;
+        ISecondaryPriceFeed(secondaryPriceFeed).setPythId(_token, _pythId);
     }
 
-    function getPrice(address _token, bool _maximise, bool /* _useSwapPricing */ )
+    function getPrice(address _token, bool _maximize, bool /* _useSwapPricing */ )
         public
         view
         override
         returns (uint256)
     {
-        uint256 price = useV2Pricing ? getPriceV2(_token, _maximise) : getPriceV1(_token, _maximise);
+        uint256 price = useV2Pricing ? getPriceV2(_token, _maximize) : getPriceV1(_token, _maximize);
 
         uint256 adjustmentBps = adjustmentBasisPoints[_token];
         if (adjustmentBps > 0) {
@@ -142,11 +126,11 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
         return price;
     }
 
-    function getPriceV1(address _token, bool _maximise) public view returns (uint256) {
-        uint256 price = getPrimaryPrice(_token);
+    function getPriceV1(address _token, bool _maximize) public view returns (uint256) {
+        uint256 price = getPrimaryPrice(_token, _maximize);
 
         if (isSecondaryPriceEnabled) {
-            price = getSecondaryPrice(_token, price, _maximise);
+            price = getSecondaryPrice(_token, price, _maximize);
         }
 
         if (strictStableTokens[_token]) {
@@ -155,13 +139,13 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
                 return ONE_USD;
             }
 
-            // if _maximise and price is e.g. 1.02, return 1.02
-            if (_maximise && price > ONE_USD) {
+            // if _maximize and price is e.g. 1.02, return 1.02
+            if (_maximize && price > ONE_USD) {
                 return price;
             }
 
-            // if !_maximise and price is e.g. 0.98, return 0.98
-            if (!_maximise && price < ONE_USD) {
+            // if !_maximize and price is e.g. 0.98, return 0.98
+            if (!_maximize && price < ONE_USD) {
                 return price;
             }
 
@@ -170,18 +154,18 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
 
         uint256 _spreadBasisPoints = spreadBasisPoints[_token];
 
-        if (_maximise) {
+        if (_maximize) {
             return (price * (BASIS_POINTS_DIVISOR + _spreadBasisPoints)) / BASIS_POINTS_DIVISOR;
         }
 
         return (price * (BASIS_POINTS_DIVISOR - _spreadBasisPoints)) / BASIS_POINTS_DIVISOR;
     }
 
-    function getPriceV2(address _token, bool _maximise) public view returns (uint256) {
-        uint256 price = getPrimaryPrice(_token);
+    function getPriceV2(address _token, bool _maximize) public view returns (uint256) {
+        uint256 price = getPrimaryPrice(_token, _maximize);
 
         if (isSecondaryPriceEnabled) {
-            price = getSecondaryPrice(_token, price, _maximise);
+            price = getSecondaryPrice(_token, price, _maximize);
         }
 
         if (strictStableTokens[_token]) {
@@ -190,13 +174,13 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
                 return ONE_USD;
             }
 
-            // if _maximise and price is e.g. 1.02, return 1.02
-            if (_maximise && price > ONE_USD) {
+            // if _maximize and price is e.g. 1.02, return 1.02
+            if (_maximize && price > ONE_USD) {
                 return price;
             }
 
-            // if !_maximise and price is e.g. 0.98, return 0.98
-            if (!_maximise && price < ONE_USD) {
+            // if !_maximize and price is e.g. 0.98, return 0.98
+            if (!_maximize && price < ONE_USD) {
                 return price;
             }
 
@@ -205,7 +189,7 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
 
         uint256 _spreadBasisPoints = spreadBasisPoints[_token];
 
-        if (_maximise) {
+        if (_maximize) {
             return (price * (BASIS_POINTS_DIVISOR + _spreadBasisPoints)) / BASIS_POINTS_DIVISOR;
         }
 
@@ -213,30 +197,29 @@ contract VaultPriceFeed is MainDemoConsumerBase, Governable, IVaultPriceFeed {
     }
 
     function getLatestPrimaryPrice(address _token) public view override returns (uint256) {
-        string memory ticker = tokensToTickers[_token];
-        require(bytes(ticker).length > 0, "VaultPriceFeed: invalid ticker");
-        uint256 price = getOracleNumericValueFromTxMsg(bytes32(bytes(ticker)));
+        bytes32 priceId = pythIds[_token];
+        require(priceId != bytes32(0), "VaultPriceFeed: invalid pyth id");
+        PythStructs.Price memory priceData = pyth.getPriceUnsafe(priceId);
 
-        require(price > 0, "VaultPriceFeed: invalid price");
+        require(priceData.price > 0, "VaultPriceFeed: invalid price");
 
-        return uint256(price);
+        return priceData.extractPrice();
     }
 
-    function getPrimaryPrice(address _token) public view returns (uint256) {
-        string memory ticker = tokensToTickers[_token];
-        require(bytes(ticker).length > 0, "VaultPriceFeed: invalid ticker");
-        uint256 price = getOracleNumericValueFromTxMsg(bytes32(bytes(ticker)));
+    function getPrimaryPrice(address _token, bool _maximize) public view returns (uint256) {
+        bytes32 priceId = pythIds[_token];
+        require(priceId != bytes32(0), "VaultPriceFeed: invalid pyth id");
+        PythStructs.Price memory priceData = pyth.getEmaPriceUnsafe(priceId);
 
-        require(price > 0, "VaultPriceFeed: could not fetch price");
+        require(priceData.price > 0, "VaultPriceFeed: invalid price");
         // normalise price precision
-        uint256 _priceDecimals = priceDecimals[_token];
-        return (price * PRICE_PRECISION) / (10 ** _priceDecimals);
+        return priceData.extractPrice(_maximize);
     }
 
-    function getSecondaryPrice(address _token, uint256 _referencePrice, bool _maximise) public view returns (uint256) {
+    function getSecondaryPrice(address _token, uint256 _referencePrice, bool _maximize) public view returns (uint256) {
         if (secondaryPriceFeed == address(0)) {
             return _referencePrice;
         }
-        return ISecondaryPriceFeed(secondaryPriceFeed).getPrice(_token, _referencePrice, _maximise);
+        return ISecondaryPriceFeed(secondaryPriceFeed).getPrice(_token, _referencePrice, _maximize);
     }
 }

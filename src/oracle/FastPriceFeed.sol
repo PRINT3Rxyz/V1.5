@@ -21,7 +21,7 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
     // allowed deviation from primary price
     uint256 public maxDeviationBasisPoints;
     uint256 public maxTimeDeviation = 1 minutes;
-    mapping(address => bytes32) public override pythIds;
+    mapping(address => bytes32) private pythIds;
     mapping(address => bool) public isUpdater;
 
     modifier onlyUpdater() {
@@ -35,16 +35,9 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
         vaultPriceFeed = IVaultPriceFeed(_vaultPriceFeed);
     }
 
-    function setPythIds(address[] calldata _tokens, bytes32[] calldata _pythIds) external onlyGov {
-        uint256 len = _tokens.length;
-        require(len == _pythIds.length, "FastPriceFeed: invalid lengths");
-
-        for (uint256 i; i < len;) {
-            pythIds[_tokens[i]] = _pythIds[i];
-            unchecked {
-                ++i;
-            }
-        }
+    function setPythId(address _token, bytes32 _pythId) external {
+        if (msg.sender != address(vaultPriceFeed)) revert FastPriceFeed_OnlyVaultPriceFeed();
+        pythIds[_token] = _pythId;
     }
 
     function setVaultPriceFeed(address _vaultPriceFeed) external onlyGov {
@@ -116,27 +109,23 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
         positionRouter.executeDecreasePositions(_endIndexForDecreasePositions, payable(msg.sender));
     }
 
-    function getPrice(
-        address _token,
-        uint256 _refPrice, // redstone price
-        bool _maximise
-    ) external view override returns (uint256) {
+    function getPrice(address _token, uint256 _refPrice, bool _maximize) external view override returns (uint256) {
         PythStructs.Price memory price = pyth.getPriceNoOlderThan(pythIds[_token], maxTimeDeviation);
 
         uint256 pythPrice = (uint256(uint64(price.price)) * PRICE_PRECISION) / (10 ** uint32(-price.expo));
 
-        return _getPrice(_refPrice, pythPrice, _maximise);
+        return _getPrice(_refPrice, pythPrice, _maximize);
     }
 
-    function getOffchainPrice(address _token, uint256 _offchainPrice, bool _maximise)
+    function getOffchainPrice(address _token, uint256 _offchainPrice, bool _maximize)
         external
         view
         override
         returns (uint256)
     {
-        uint256 primaryPrice = vaultPriceFeed.getPrimaryPrice(_token);
+        uint256 primaryPrice = vaultPriceFeed.getPrimaryPrice(_token, _maximize);
 
-        return _getPrice(primaryPrice, _offchainPrice, _maximise);
+        return _getPrice(primaryPrice, _offchainPrice, _maximize);
     }
 
     function _getPrice(uint256 primaryPrice, uint256 secondaryPrice, bool maximise) internal view returns (uint256) {

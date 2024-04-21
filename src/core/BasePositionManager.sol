@@ -72,8 +72,8 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
     constructor(
         address _vault,
         address _router,
-        address _shortsTracker,
         address _collateralToken,
+        address _shortsTracker,
         uint256 _depositFee
     ) {
         vault = _vault;
