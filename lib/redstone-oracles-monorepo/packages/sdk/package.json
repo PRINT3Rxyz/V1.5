@@ -1,0 +1,28 @@
+{
+  "name": "@redstone-finance/sdk",
+  "version": "0.4.0",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "test": "yarn global:jest:cov",
+    "clean": "rm -rf dist",
+    "build": "yarn clean && yarn global:tsc --build tsconfig.build.json",
+    "preversion": "yarn build",
+    "pack-package": "yarn build && cd dist && npm pack",
+    "lint": "yarn global:eslint ."
+  },
+  "dependencies": {
+    "@redstone-finance/oracles-smartweave-contracts": "^0.4.0",
+    "@redstone-finance/protocol": "^0.4.0",
+    "@redstone-finance/utils": "^0.4.0",
+    "axios": "^1.6.2",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "msw": "^1.2.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

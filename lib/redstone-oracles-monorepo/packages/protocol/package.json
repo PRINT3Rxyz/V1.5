@@ -1,0 +1,19 @@
+{
+  "name": "@redstone-finance/protocol",
+  "version": "0.4.0",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "license": "MIT",
+  "scripts": {
+    "test": "yarn global:jest:cov",
+    "build": "rm -rf dist && yarn global:tsc --build tsconfig.build.json",
+    "preversion": "yarn build",
+    "lint": "yarn global:eslint ."
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

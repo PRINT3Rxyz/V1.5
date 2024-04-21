@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig-common.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "references": [
+    {
+      "path": "../protocol/tsconfig.build.json"
+    },
+    {
+      "path": "../oracles-smartweave-contracts/tsconfig.build.json"
+    }
+  ]
+}

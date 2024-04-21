@@ -1,0 +1,1031 @@
+{
+  "interval": 10000,
+  "priceAggregator": "median",
+  "defaultSource": ["coingecko"],
+  "sourceTimeout": 7000,
+  "minValidSourcesPercentage": 1,
+  "deviationCheck": {
+    "deviationWithRecentValues": {
+      "maxPercent": 30,
+      "maxDelayMilliseconds": 300000
+    }
+  },
+  "tokens": {
+    "VST": {
+      "source": ["curve-frax-vst-multi-block"]
+    },
+    "USDC": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "bitstamp",
+        "coingecko",
+        "coinmarketcap",
+        "curve-dai",
+        "curve-usdt",
+        "gate",
+        "kaiko",
+        "kaiko-v2",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "maverick",
+        "mexc",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-dai-100"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "USDT": {
+      "source": [
+        "bitfinex2",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "kaiko",
+        "kaiko-v2",
+        "kraken"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "BTC": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "bitrue",
+        "bitmart",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kaiko",
+        "kaiko-v2",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "DAI": {
+      "source": [
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "curve-usdt",
+        "kraken",
+        "mexc",
+        "okx",
+        "xt"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "FXS": {
+      "source": [
+        "binance",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coingecko",
+        "coinmarketcap",
+        "lbank",
+        "mexc",
+        "kucoin",
+        "okx"
+      ]
+    },
+    "FRAX": {
+      "source": [
+        "curve-3crv",
+        "curve-usdc-frax-multi-block",
+        "fraxswap-on-chain-fxs",
+        "fraxswap-on-chain-weth",
+        "uniswap-v3-ethereum-on-chain-fxs-10000",
+        "uniswap-v3-ethereum-on-chain-usdc-500",
+        "uniswap-v3-ethereum-on-chain-dai-500"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "ETH": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bingx",
+        "bitrue",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kaiko",
+        "kaiko-v2",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "stETH": {
+      "source": [
+        "bingx",
+        "bitget",
+        "coinmarketcap",
+        "curve-eth",
+        "curve-weth",
+        "okx",
+        "uniswap-v2-on-chain-weth"
+      ]
+    },
+    "stETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "wstETH": {
+      "source": [
+        "balancer-arbitrum-weth",
+        "balancer-ethereum-aave",
+        "balancer-ethereum-weth",
+        "maverick",
+        "uniswap-v3-arbitrum-on-chain-weth-100",
+        "uniswap-v3-ethereum-on-chain-weth-100",
+        "uniswap-v3-optimism-on-chain-weth-100"
+      ]
+    },
+    "wstETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "wstETH_FUNDAMENTAL": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "wstETH/stETH": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "SWETH": {
+      "source": [
+        "balancer-ethereum-weth-multi-block",
+        "maverick-multi-block",
+        "pancake-swap-on-chain-weth-500",
+        "uniswap-v3-ethereum-on-chain-weth-500-multi-block"
+      ]
+    },
+    "SWETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "3Crv": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "LUSD": {
+      "source": [
+        "curve-3crv",
+        "maverick",
+        "uniswap-v3-ethereum-on-chain-usdc-500",
+        "velodrome-on-chain-usdc"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "GHO": {
+      "source": [
+        "balancer-ethereum-usdc",
+        "balancer-ethereum-usdt",
+        "coingecko",
+        "coinmarketcap",
+        "curve-usde",
+        "maverick"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "AAVE": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bitget",
+        "bitmart",
+        "bitfinex2",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "kaiko",
+        "kaiko-v2",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "xt"
+      ]
+    },
+    "C3M": {
+      "source": [
+        "twelve-data",
+        "financialmodelingprep-usd",
+        "alphavantage-stock"
+      ]
+    },
+    "USDC.USDT": {
+      "source": ["non-usd-based"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "USDC.DAI": {
+      "source": ["non-usd-based"],
+      "decimals": 14,
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "TRX": {
+      "source": [
+        "binance",
+        "bitget",
+        "bitrue",
+        "gate",
+        "coinmarketcap",
+        "kaiko-v2",
+        "kucoin",
+        "lbank",
+        "mexc"
+      ]
+    },
+    "PREMIA": {
+      "source": [
+        "camelot-v3-weth",
+        "sushiswap-ethereum-on-chain-weth",
+        "uniswap-v3-arbitrum-on-chain-weth-3000"
+      ]
+    },
+    "PREMIA-TWAP-60": {
+      "source": ["twap-local-redstone-primary-prod"]
+    },
+    "MNT": {
+      "source": [
+        "bingx",
+        "bitmart",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "mexc",
+        "uniswap-v3-ethereum-on-chain-weth-3000"
+      ]
+    },
+    "TLOS": {
+      "source": ["coinmarketcap", "gate", "mexc", "kucoin", "bitget"]
+    },
+    "ETHx": {
+      "source": ["curve-weth", "curve-wsteth"]
+    },
+    "ETHx/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "TIA": {
+      "source": [
+        "bitfinex2",
+        "bitget",
+        "binance",
+        "coinbasepro",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "okx",
+        "xt"
+      ]
+    },
+    "weETH": {
+      "source": [
+        "balancer-ethereum-reth",
+        "curve-weth",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "uniswap-v3-ethereum-on-chain-weth-500",
+        "uniswap-v3-ethereum-on-chain-wsteth-500"
+      ]
+    },
+    "weETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "weETH_FUNDAMENTAL": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "rETH": {
+      "source": [
+        "uniswap-v3-ethereum-on-chain-weth-100",
+        "uniswap-v3-ethereum-on-chain-weth-500",
+        "balancer-ethereum-weth",
+        "balancer-ethereum-wsteth",
+        "curve-wsteth",
+        "pancake-swap-on-chain-weth-500"
+      ]
+    },
+    "rETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "osETH": {
+      "priceAggregator": "depth",
+      "source": [
+        "balancer-ethereum-weth",
+        "uniswap-v3-ethereum-on-chain-usdc-500",
+        "curve-reth"
+      ]
+    },
+    "osETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "pxETH": {
+      "source": [
+        "balancer-ethereum-frxeth",
+        "curve-steth-pxeth-multi-block",
+        "curve-frxeth",
+        "uniswap-v3-ethereum-on-chain-weth-100-multi-block",
+        "pancake-swap-on-chain-weth-100"
+      ]
+    },
+    "pxETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "apxETH": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "apxETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "ARB": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "uniswap-v3-arbitrum-on-chain-weth-500",
+        "uniswap-v3-arbitrum-on-chain-weth-3000",
+        "uniswap-v3-arbitrum-on-chain-usdc-500"
+      ]
+    },
+    "OP": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "mexc",
+        "okx",
+        "xt",
+        "uniswap-v3-optimism-on-chain-weth-3000",
+        "uniswap-v3-optimism-on-chain-usdc-3000"
+      ]
+    },
+    "CELO": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "mexc",
+        "okx"
+      ]
+    },
+    "BRL": {
+      "source": [
+        "binance-api",
+        "bitso-api",
+        "ecb",
+        "kucoin-api",
+        "mercado-api",
+        "twelve-data"
+      ]
+    },
+    "EUR": {
+      "source": [
+        "binance",
+        "bitstamp-api",
+        "coinbase-api",
+        "ecb",
+        "kaiko",
+        "kaiko-v2",
+        "kraken",
+        "kucoin-api",
+        "twelve-data"
+      ]
+    },
+    "CELO/EUR": {
+      "source": ["non-usd-based"]
+    },
+    "CELO/BRL": {
+      "source": ["non-usd-based"]
+    },
+    "USDC/EUR": {
+      "source": ["non-usd-based"]
+    },
+    "USDC/BRL": {
+      "source": ["non-usd-based"]
+    },
+    "EUROC": {
+      "source": [
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "trader-joe-v2-avalanche-on-chain-usdc",
+        "uniswap-v3-ethereum-on-chain-usdc-500"
+      ]
+    },
+    "EUROC/EUR": {
+      "source": ["non-usd-based"]
+    },
+    "AVAX": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kaiko",
+        "kaiko-v2",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx"
+      ]
+    },
+    "crvFRAX": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "ALUSD": {
+      "source": ["curve-3crv", "curve-crvfrax", "velodrome-on-chain-usdc"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "ETH/USDC": {
+      "source": ["non-usd-based"]
+    },
+    "ATOM": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "bingx",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "CANTO": {
+      "source": [
+        "coingecko",
+        "canto-dex-note",
+        "canto-dex-atom",
+        "canto-dex-eth"
+      ]
+    },
+    "XAU": {
+      "source": [
+        "twelve-data",
+        "finhub-usd",
+        "financialmodelingprep-usd"
+      ]
+    },
+    "XRP": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bitfinex2",
+        "bitstamp",
+        "coingecko",
+        "coinmarketcap",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "okx"
+      ]
+    },
+    "SOL": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "agEUR": {
+      "source": [
+        "curve-euroc",
+        "uniswap-v3-ethereum-on-chain-weth-500",
+        "uniswap-v3-ethereum-on-chain-usdc-100",
+        "uniswap-v3-polygon-on-chain-usdc-100"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "XVS": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "coinmarketcap",
+        "gate",
+        "lbank",
+        "mexc"
+      ]
+    },
+    "WBTC": {
+      "source": [
+        "binance",
+        "bingx",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "kraken",
+        "mexc",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "uniswap-v3-ethereum-on-chain-weth-500",
+        "uniswap-v3-arbitrum-on-chain-weth-500"
+      ]
+    },
+    "UNI": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "xt"
+      ]
+    },
+    "LINK": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bitstamp",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "xt"
+      ]
+    },
+    "CRV": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "MKR": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitfinex2",
+        "bitget",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "uniswap-v3-ethereum-on-chain-weth-3000",
+        "uniswap-v3-ethereum-on-chain-weth-10000",
+        "xt"
+      ]
+    },
+    "APE": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "lbank",
+        "okx",
+        "xt"
+      ]
+    },
+    "CVX": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "mexc",
+        "okx"
+      ]
+    },
+    "USDM": {
+      "source": ["curve-3crv", "curve-sdai"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "wUSDM": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "MANTA": {
+      "source": [
+        "binance",
+        "bingx",
+        "bitget",
+        "bitrue",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "lbank",
+        "mexc"
+      ]
+    },
+    "STONE": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "frxETH": {
+      "source": [
+        "curve-crvusd",
+        "curve-cvx",
+        "curve-eth",
+        "curve-steth",
+        "curve-weth",
+        "uniswap-v3-ethereum-on-chain-frax-10000"
+      ]
+    },
+    "eUSD": {
+      "source": ["aerodrome-usdc", "curve-crvfrax", "curve-eth+", "curve-rsr"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "RSR": {
+      "source": [
+        "binance",
+        "binanceusdm",
+        "bingx",
+        "bitget",
+        "bitmart",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "ETH+": {
+      "source": ["curve-weth", "uniswap-v3-ethereum-on-chain-weth-500"]
+    },
+    "sDAI": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "NOTE": {
+      "source": ["canto-dex-usdc", "canto-dex-usdt"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "cNOTE": {
+      "source": ["canto-evm-fetcher"]
+    },
+    "LAB.m": {
+      "source": ["aperture-swap-weth-500"]
+    },
+    "TON": {
+      "source": [
+        "bingx",
+        "bitget",
+        "bitfinex2",
+        "bitmart",
+        "bitrue",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "XTZ": {
+      "source": [
+        "binance",
+        "bitfinex2",
+        "bitget",
+        "bitmart",
+        "bingx",
+        "bitrue",
+        "coinbasepro",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kraken",
+        "kucoin",
+        "lbank",
+        "mexc",
+        "okx",
+        "xt"
+      ]
+    },
+    "GBP": {
+      "source": [
+        "alphavantage-usd",
+        "twelve-data",
+        "ecb",
+        "kraken",
+        "bitfinex2",
+        "financialmodelingprep-usd"
+      ]
+    },
+    "sfrxETH": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "rsETH": {
+      "source": [
+        "balancer-ethereum-ethx",
+        "balancer-ethereum-weth",
+        "curve-sfrxeth",
+        "uniswap-v3-ethereum-on-chain-weth-500"
+      ]
+    },
+    "rsETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "ezETH": {
+      "source": [
+        "balancer-ethereum-weth",
+        "balancer-ethereum-weeth",
+        "curve-weth",
+        "uniswap-v3-ethereum-on-chain-weth-100"
+      ]
+    },
+    "ezETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "crvUSD": {
+      "source": [
+        "curve-crv",
+        "curve-frax",
+        "curve-usdc",
+        "curve-usde",
+        "curve-usdt",
+        "curve-weth"
+      ]
+    },
+    "USDe": {
+      "source": [
+        "curve-dai",
+        "curve-frax",
+        "curve-usdc",
+        "uniswap-v3-ethereum-on-chain-usdt-100"
+      ],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "sUSDe": {
+      "source": ["ethereum-evm-fetcher"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "USDB": {
+      "source": ["ring-swap-weth", "thruster-weth", "ambient-eth"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "USDB-TWAP-30": {
+      "source": ["twap-local-redstone-primary-prod"],
+      "deviationCheck": {
+        "deviationWithRecentValues": {
+          "maxPercent": 5,
+          "maxDelayMilliseconds": 300000
+        }
+      }
+    },
+    "rswETH": {
+      "source": [
+        "balancer-ethereum-ezeth",
+        "balancer-ethereum-weeth",
+        "curve-weeth",
+        "pancake-swap-on-chain-weth-500"
+      ]
+    },
+    "rswETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "sUSDe_RATE_PROVIDER": {
+      "source": ["ethereum-evm-fetcher"]
+    },
+    "pufETH": {
+      "source": [
+        "curve-wsteth",
+        "curve-wsteth-secondary",
+        "uniswap-v3-ethereum-on-chain-weth-3000"
+      ]
+    },
+    "pufETH/ETH": {
+      "source": ["non-usd-based"]
+    },
+    "BNB": {
+      "source": [
+        "binance",
+        "binancecoinm",
+        "binanceusdm",
+        "bitget",
+        "bitmart",
+        "coingecko",
+        "coinmarketcap",
+        "gate",
+        "kucoin",
+        "mexc",
+        "lbank",
+        "okx",
+        "xt"
+      ]
+    }
+  }
+}

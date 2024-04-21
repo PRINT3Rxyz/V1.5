@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig-common.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["**/*", "package.json"],
+  "references": [
+    {
+      "path": "../utils/tsconfig.build.json"
+    },
+    {
+      "path": "../sdk/tsconfig.build.json"
+    },
+    {
+      "path": "../protocol/tsconfig.build.json"
+    }
+  ]
+}

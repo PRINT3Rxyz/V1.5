@@ -1,0 +1,24 @@
+{
+  "name": "@redstone-finance/integration-tests",
+  "version": "0.4.0",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "run-ts": "yarn global:ts-node",
+    "lint": "yarn global:eslint .",
+    "build": "rm -rf dist && yarn global:tsc --build"
+  },
+  "dependencies": {
+    "@redstone-finance/cache-service": "^0.4.0",
+    "@redstone-finance/evm-connector": "^0.4.0",
+    "@redstone-finance/on-chain-relayer": "^0.4.0",
+    "@redstone-finance/oracle-node": "^0.4.0",
+    "@redstone-finance/protocol": "^0.4.0",
+    "@redstone-finance/sdk": "^0.4.0",
+    "@redstone-finance/utils": "^0.4.0",
+    "axios": "^1.6.2",
+    "ethers": "^5.7.2"
+  }
+}

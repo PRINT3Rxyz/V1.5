@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig-common.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "references": [
+    {
+      "path": "../utils/tsconfig.build.json"
+    },
+    {
+      "path": "../protocol/tsconfig.build.json"
+    },
+    {
+      "path": "../sdk/tsconfig.build.json"
+    },
+    {
+      "path": "../on-chain-relayer/tsconfig.build.json"
+    },
+    {
+      "path": "../oracle-node/tsconfig.build.json"
+    },
+    {
+      "path": "../evm-connector/tsconfig.build.json"
+    },
+    {
+      "path": "../cache-service/tsconfig.build.json"
+    }
+  ]
+}
