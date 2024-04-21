@@ -92,7 +92,7 @@ contract BrrrManager is ReentrancyGuard, Governable, IBrrrManager {
         aumDeduction = _aumDeduction;
     }
 
-    function addLiquidity(uint256 _amount, uint256 _minUsdp, uint256 _minPlp)
+    function addLiquidity(uint256 _amount, uint256 _minUsdp, uint256 _minBrrr)
         external
         override
         nonReentrant
@@ -101,7 +101,7 @@ contract BrrrManager is ReentrancyGuard, Governable, IBrrrManager {
         if (inPrivateMode) {
             revert("BrrrManager: action not enabled");
         }
-        return _addLiquidity(msg.sender, msg.sender, _amount, _minUsdp, _minPlp);
+        return _addLiquidity(msg.sender, msg.sender, _amount, _minUsdp, _minBrrr);
     }
 
     function addLiquidityForAccount(
@@ -109,10 +109,10 @@ contract BrrrManager is ReentrancyGuard, Governable, IBrrrManager {
         address _account,
         uint256 _amount,
         uint256 _minUsdp,
-        uint256 _minPlp
+        uint256 _minBrrr
     ) external override nonReentrant returns (uint256) {
         _validateHandler();
-        return _addLiquidity(_fundingAccount, _account, _amount, _minUsdp, _minPlp);
+        return _addLiquidity(_fundingAccount, _account, _amount, _minUsdp, _minBrrr);
     }
 
     function removeLiquidity(uint256 _brrrAmount, uint256 _minOut, address _receiver)
@@ -285,7 +285,7 @@ contract BrrrManager is ReentrancyGuard, Governable, IBrrrManager {
 
         uint256 mintAmount = aumInUsdp == 0 ? usdpAmount : (usdpAmount * brrrSupply) / aumInUsdp;
 
-        require(mintAmount >= _minBrrr, "BrrrManager: insufficient PLP output");
+        require(mintAmount >= _minBrrr, "BrrrManager: insufficient BRRR output");
 
         IMintable(brrr).mint(_account, mintAmount);
 

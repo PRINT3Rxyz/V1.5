@@ -12,16 +12,6 @@ import "./interfaces/IVaultAfterHook.sol";
 contract Vault is ReentrancyGuard, IVaultPyth {
     using SafeERC20 for IERC20;
 
-    struct Position {
-        uint256 size;
-        uint256 collateral;
-        uint256 averagePrice;
-        uint256 entryFundingRate;
-        uint256 reserveAmount;
-        int256 realisedPnl;
-        uint256 lastIncreasedTime;
-    }
-
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant FUNDING_RATE_PRECISION = 1000000;
     uint256 public constant PRICE_PRECISION = 10 ** 30;
@@ -35,7 +25,6 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     bool public override isInitialized;
     bool public override isLeverageEnabled;
 
-    address public errorController;
     address public override gov;
 
     address public override router;
@@ -114,79 +103,10 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     mapping(uint256 id => string error) public errors;
 
     address public afterHook;
-    mapping(address token => uint256 maxLeverage) public maxLeveragePerToken;
-
-    event LiquidityAdded(uint256 tokenAmount, uint256 usdpAmount, uint256 feeBasisPoints);
-    event LiquidityRemoved(uint256 usdpAmount, uint256 tokenAmount, uint256 feeBasisPoints);
-
-    event IncreasePosition(
-        bytes32 key,
-        address account,
-        address indexToken,
-        uint256 collateralDelta,
-        uint256 sizeDelta,
-        bool isLong,
-        uint256 price,
-        uint256 fee
-    );
-    event DecreasePosition(
-        bytes32 key,
-        address account,
-        address indexToken,
-        uint256 collateralDelta,
-        uint256 sizeDelta,
-        bool isLong,
-        uint256 price,
-        uint256 fee
-    );
-    event LiquidatePosition(
-        bytes32 key,
-        address account,
-        address indexToken,
-        bool isLong,
-        uint256 size,
-        uint256 collateral,
-        uint256 reserveAmount,
-        int256 realisedPnl,
-        uint256 markPrice
-    );
-    event UpdatePosition(
-        bytes32 key,
-        uint256 size,
-        uint256 collateral,
-        uint256 averagePrice,
-        uint256 entryFundingRate,
-        uint256 reserveAmount,
-        int256 realisedPnl,
-        uint256 markPrice
-    );
-    event ClosePosition(
-        bytes32 key,
-        uint256 size,
-        uint256 collateral,
-        uint256 averagePrice,
-        uint256 entryFundingRate,
-        uint256 reserveAmount,
-        int256 realisedPnl
-    );
-
-    event UpdateFundingRate(address indexed token, bool indexed isLong, uint256 fundingRate);
-    event UpdatePnl(bytes32 key, bool hasProfit, uint256 delta);
-
-    event CollectMarginFees(uint256 feeUsd, uint256 feeTokens);
-
-    event DirectPoolDeposit(uint256 amount);
-    event IncreasePoolAmount(uint256 amount);
-    event DecreasePoolAmount(uint256 amount);
-    event IncreaseUsdpAmount(uint256 amount);
-    event DecreaseUsdpAmount(uint256 amount);
-    event IncreaseReservedAmount(address indexed token, bool indexed isLong, uint256 amount);
-    event DecreaseReservedAmount(address indexed token, bool indexed isLong, uint256 amount);
+    mapping(address token => uint256 maxLeverage) public maxLeverages;
 
     // once the parameters are verified to be working correctly,
-
     // gov should be set to a timelock contract or a governance contract
-
     constructor() {
         gov = msg.sender;
     }
@@ -199,9 +119,9 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         uint256 _fundingRateFactor
     ) external {
         _onlyGov();
-        _validate(!isInitialized, 1);
-        _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 5);
-        _validate(_fundingRateFactor <= MAX_FUNDING_RATE_FACTOR, 7);
+        if (isInitialized) revert Vault_AlreadyInitialized();
+        if (_liquidationFeeUsd > MAX_LIQUIDATION_FEE_USD) revert Vault_LiquidationFee();
+        if (_fundingRateFactor > MAX_FUNDING_RATE_FACTOR) revert Vault_FundingRateFactor();
         isInitialized = true;
 
         router = _router;
@@ -217,16 +137,6 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         collateralToken = _collateralToken;
         liquidationFeeUsd = _liquidationFeeUsd;
         fundingRateFactor = _fundingRateFactor;
-    }
-
-    function setErrorController(address _errorController) external {
-        _onlyGov();
-        errorController = _errorController;
-    }
-
-    function setError(uint256 _errorCode, string calldata _error) external override {
-        require(msg.sender == errorController, "Vault: invalid errorController");
-        errors[_errorCode] = _error;
     }
 
     function allWhitelistedTokensLength() external view override returns (uint256) {
@@ -260,15 +170,15 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
     function setMaxLeverage(uint256 _maxLeverage) external override {
         _onlyGov();
-        _validate(_maxLeverage > MIN_LEVERAGE, 1);
+        if (maxLeverage <= MIN_LEVERAGE) revert Vault_MaxLeverage();
         maxLeverage = _maxLeverage;
     }
 
-    function setMaxLeveragePerToken(address _token, uint256 _maxLeverage) external {
+    function setMaxLeverages(address _token, uint256 _maxLeverage) external {
         _onlyGov();
-        _validate(_maxLeverage == 0 || _maxLeverage > MIN_LEVERAGE, 1);
-        _validate(whitelistedTokens[_token], 8);
-        maxLeveragePerToken[_token] = _maxLeverage;
+        if (_maxLeverage <= MIN_LEVERAGE && _maxLeverage != 0) revert Vault_MaxLeverage();
+        if (!whitelistedTokens[_token]) revert Vault_TokenNotWhitelisted();
+        maxLeverages[_token] = _maxLeverage;
     }
 
     function setMaxGlobalSize(address _token, uint256 _longAmount, uint256 _shortAmount) external override {
@@ -285,10 +195,10 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         uint256 _minProfitTime
     ) external override {
         _onlyGov();
-        _validate(_taxBasisPoints <= MAX_FEE_BASIS_POINTS, 2);
-        _validate(_mintBurnFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 3);
-        _validate(_marginFeeBasisPoints <= MAX_FEE_BASIS_POINTS, 4);
-        _validate(_liquidationFeeUsd <= MAX_LIQUIDATION_FEE_USD, 5);
+        if (_taxBasisPoints > MAX_FEE_BASIS_POINTS) revert Vault_TaxBasisPoints();
+        if (_mintBurnFeeBasisPoints > MAX_FEE_BASIS_POINTS) revert Vault_MintBurnFeeBasisPoints();
+        if (_marginFeeBasisPoints > MAX_FEE_BASIS_POINTS) revert Vault_MarginFeeBasisPoints();
+        if (_liquidationFeeUsd > MAX_LIQUIDATION_FEE_USD) revert Vault_LiquidationFee();
         taxBasisPoints = _taxBasisPoints;
         mintBurnFeeBasisPoints = _mintBurnFeeBasisPoints;
         marginFeeBasisPoints = _marginFeeBasisPoints;
@@ -298,8 +208,8 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
     function setFundingRate(uint256 _fundingInterval, uint256 _fundingRateFactor) external override {
         _onlyGov();
-        _validate(_fundingInterval >= MIN_FUNDING_RATE_INTERVAL, 6);
-        _validate(_fundingRateFactor <= MAX_FUNDING_RATE_FACTOR, 7);
+        if (_fundingInterval < MIN_FUNDING_RATE_INTERVAL) revert Vault_FundingInterval();
+        if (_fundingRateFactor > MAX_FUNDING_RATE_FACTOR) revert Vault_FundingRateFactor();
         fundingInterval = _fundingInterval;
         fundingRateFactor = _fundingRateFactor;
     }
@@ -336,7 +246,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     function clearTokenConfig(address _token) external {
         _onlyGov();
         require(_token != collateralToken, "Vault: Cannot clear collateralToken");
-        _validate(whitelistedTokens[_token], 8);
+        if (!whitelistedTokens[_token]) revert Vault_TokenNotWhitelisted();
         delete whitelistedTokens[_token];
         delete tokenDecimals[_token];
         delete minProfitBasisPoints[_token];
@@ -379,13 +289,13 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     // useful in allowing the pool to become over-collaterised
     function directPoolDeposit() external override nonReentrant {
         uint256 tokenAmount = _transferIn(collateralToken);
-        _validate(tokenAmount > 0, 9);
+        if (tokenAmount == 0) revert Vault_ZeroAmount();
         _increasePoolAmount(tokenAmount);
         emit DirectPoolDeposit(tokenAmount);
     }
 
     function estimateUSDPOut(uint256 _amount) external view override returns (uint256) {
-        _validate(_amount > 0, 9);
+        if (_amount == 0) revert Vault_ZeroAmount();
 
         uint256 price = getMinPrice(collateralToken);
 
@@ -400,7 +310,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     }
 
     function estimateTokenIn(uint256 _usdpAmount) external view override returns (uint256) {
-        _validate(_usdpAmount > 0, 10);
+        if (_usdpAmount == 0) revert Vault_ZeroAmount();
 
         uint256 price = getMinPrice(collateralToken);
 
@@ -419,7 +329,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         useSwapPricing = true;
 
         uint256 tokenAmount = _transferIn(_collateralToken);
-        _validate(tokenAmount > 0, 9);
+        if (tokenAmount == 0) revert Vault_ZeroAmount();
 
         uint256 price = getMinPrice(_collateralToken);
 
@@ -430,7 +340,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         uint256 mintAmount = (amountAfterFees * price) / PRICE_PRECISION;
 
         mintAmount = _adjustForRawDecimals(mintAmount, tokenDecimals[_collateralToken], USDP_DECIMALS);
-        _validate(mintAmount > 0, 10);
+        if (mintAmount == 0) revert Vault_ZeroAmount();
 
         _increaseUsdpAmount(mintAmount);
         _increasePoolAmount(tokenAmount);
@@ -445,11 +355,11 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         _validateBrrrManager();
         useSwapPricing = true;
 
-        _validate(_usdpAmount > 0, 10);
+        if (_usdpAmount == 0) revert Vault_ZeroAmount();
 
         uint256 redemptionAmount = getRedemptionAmount(_usdpAmount);
 
-        _validate(redemptionAmount > 0, 11);
+        if (redemptionAmount == 0) revert Vault_ZeroAmount();
 
         uint256 feeBasisPoints = mintBurnFeeBasisPoints;
 
@@ -458,7 +368,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         _decreaseUsdpAmount(_usdpAmount);
         _decreasePoolAmount(amountOut);
 
-        _validate(amountOut > 0, 12);
+        if (amountOut == 0) revert Vault_ZeroAmount();
 
         _transferOut(amountOut, _receiver);
 
@@ -473,7 +383,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         override
         nonReentrant
     {
-        _validate(isLeverageEnabled, 13);
+        if (!isLeverageEnabled) revert Vault_LeverageDisabled();
         _validateGasPrice();
         _validateRouter(_account);
         _validateTokens(_indexToken, _isLong);
@@ -509,14 +419,14 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
         position.collateral = position.collateral + collateralDeltaUsd;
 
-        _validate(position.collateral >= fee, 14);
+        if (position.collateral < fee) revert Vault_InsufficientCollateral();
 
         position.collateral -= fee;
         position.entryFundingRate = getEntryFundingRate(_indexToken, _isLong);
         position.size += _sizeDelta;
         position.lastIncreasedTime = block.timestamp;
 
-        _validate(position.size > 0, 15);
+        if (position.size == 0) revert Vault_ZeroSize();
         _validatePosition(position.size, position.collateral);
         validateLiquidation(_account, _indexToken, _isLong, true);
 
@@ -584,9 +494,9 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
         bytes32 key = getPositionKey(_account, _indexToken, _isLong);
         Position storage position = positions[key];
-        _validate(position.size > 0, 16);
-        _validate(position.size >= _sizeDelta, 17);
-        _validate(position.collateral >= _collateralDelta, 18);
+        if (position.size == 0) revert Vault_ZeroSize();
+        if (position.size < _sizeDelta) revert Vault_InsufficientSize();
+        if (position.collateral < _collateralDelta) revert Vault_InsufficientCollateral();
 
         // scrop variables to avoid stack too deep errors
         {
@@ -659,16 +569,16 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         override
         nonReentrant
     {
-        _validate(isLiquidator[msg.sender], 19);
+        if (!isLiquidator[msg.sender]) revert Vault_NotLiquidator();
 
         updateCumulativeFundingRate(_indexToken, _isLong);
 
         bytes32 key = getPositionKey(_account, _indexToken, _isLong);
         Position memory position = positions[key];
-        _validate(position.size > 0, 16);
+        if (position.size == 0) revert Vault_ZeroSize();
 
         (uint256 liquidationState, uint256 marginFees) = validateLiquidation(_account, _indexToken, _isLong, false);
-        _validate(liquidationState != 0, 20);
+        if (liquidationState == 0) revert Vault_NotLiquidatable();
         if (liquidationState == 2) {
             // max leverage exceeded but there is collateral remaining after deducting losses so decreasePosition instead
             _decreasePosition(_account, _indexToken, 0, position.size, _isLong, _account);
@@ -730,7 +640,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
         if (!hasProfit && collateral < delta) {
             if (_raise) {
-                revert("Vault: losses exceed collateral");
+                revert Vault_LossesExceedCollateral();
             }
             return (1, marginFees);
         }
@@ -742,7 +652,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
         if (remainingCollateral < marginFees) {
             if (_raise) {
-                revert("Vault: fees exceed collateral");
+                revert Vault_FeesExceedCollateral();
             }
             // cap the fees to the remainingCollateral
             return (1, remainingCollateral);
@@ -750,7 +660,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
         if (remainingCollateral < marginFees + liquidationFeeUsd) {
             if (_raise) {
-                revert("Vault: liquidation fees exceed collateral");
+                revert Vault_LiquidationFeesExceedCollateral();
             }
             return (1, marginFees);
         }
@@ -758,7 +668,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         uint256 _maxLeverage = getMaxLeverage(_indexToken);
         if (remainingCollateral * _maxLeverage < size * BASIS_POINTS_DIVISOR) {
             if (_raise) {
-                revert("Vault: maxLeverage exceeded");
+                revert Vault_MaxLeverageExceeded();
             }
             return (2, marginFees);
         }
@@ -885,7 +795,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     function getPositionLeverage(address _account, address _indexToken, bool _isLong) public view returns (uint256) {
         bytes32 key = getPositionKey(_account, _indexToken, _isLong);
         Position memory position = positions[key];
-        _validate(position.collateral > 0, 21);
+        if (position.collateral == 0) revert Vault_ZeroCollateral();
         return (position.size * BASIS_POINTS_DIVISOR) / position.collateral;
     }
 
@@ -979,7 +889,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         bool _isLong,
         uint256 _lastIncreasedTime
     ) public view override returns (bool, uint256) {
-        _validate(_averagePrice > 0, 22);
+        if (_averagePrice == 0) revert Vault_AveragePriceZero();
         uint256 price = _isLong ? getMinPrice(_indexToken) : getMaxPrice(_indexToken);
         uint256 priceDelta = _averagePrice > price ? _averagePrice - price : price - _averagePrice;
         uint256 delta = (_size * priceDelta) / _averagePrice;
@@ -1004,7 +914,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         bool _isLong,
         uint256 _lastIncreasedTime
     ) public view override returns (bool, uint256) {
-        _validate(_averagePrice > 0, 22);
+        if (_averagePrice == 0) revert Vault_AveragePriceZero();
         uint256 price = _markPrice;
         uint256 priceDelta = _averagePrice > price ? _averagePrice - price : price - _averagePrice;
         uint256 delta = (_size * priceDelta) / _averagePrice;
@@ -1130,12 +1040,12 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         return (usdOut, usdOutAfterFee);
     }
 
-    function _validatePosition(uint256 _size, uint256 _collateral) private view {
+    function _validatePosition(uint256 _size, uint256 _collateral) private pure {
         if (_size == 0) {
-            _validate(_collateral == 0, 23);
+            if (_collateral != 0) revert Vault_NonZeroCollateral();
             return;
         }
-        _validate(_size >= _collateral, 24);
+        if (_size < _collateral) revert Vault_CollateralExceedsSize();
     }
 
     function _validateRouter(address _account) private view {
@@ -1145,14 +1055,14 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         if (msg.sender == router) {
             return;
         }
-        _validate(approvedRouters[_account][msg.sender], 25);
+        if (!approvedRouters[_account][msg.sender]) revert Vault_UnapprovedRouter();
     }
 
     function _validateTokens(address _indexToken, bool isLong) private view {
-        _validate(whitelistedTokens[_indexToken], 8);
-        _validate(shortableTokens[_indexToken], 27);
+        if (!whitelistedTokens[_indexToken]) revert Vault_TokenNotWhitelisted();
+        if (!shortableTokens[_indexToken]) revert Vault_TokenNotShortable();
         if (!isLong) {
-            _validate(!stableTokens[_indexToken], 26);
+            if (stableTokens[_indexToken]) revert Vault_TokenNotShortable();
         }
     }
 
@@ -1199,21 +1109,21 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     function _increasePoolAmount(uint256 _amount) private {
         poolAmount += _amount;
         uint256 balance = IERC20(collateralToken).balanceOf(address(this));
-        _validate(poolAmount <= balance, 28);
+        if (poolAmount > balance) revert Vault_PoolAmount();
         emit IncreasePoolAmount(_amount);
     }
 
     function _decreasePoolAmount(uint256 _amount) private {
         require(poolAmount >= _amount, "Vault: poolAmount exceeded");
         poolAmount -= _amount;
-        _validate(totalReservedAmount <= poolAmount, 29);
+        if (totalReservedAmount > poolAmount) revert Vault_ReservedAmount();
         emit DecreasePoolAmount(_amount);
     }
 
     function _increaseUsdpAmount(uint256 _amount) private {
         usdpAmount += _amount;
         if (maxUsdpAmount != 0) {
-            _validate(usdpAmount <= maxUsdpAmount, 30);
+            if (usdpAmount > maxUsdpAmount) revert Vault_MaxUsdpAmount();
         }
         emit IncreaseUsdpAmount(_amount);
     }
@@ -1234,7 +1144,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     function _increaseReservedAmount(address _token, bool _isLong, uint256 _amount) private {
         reservedAmounts[_token][_isLong] += _amount;
         totalReservedAmount += _amount;
-        _validate(totalReservedAmount <= poolAmount, 29);
+        if (totalReservedAmount > poolAmount) revert Vault_ReservedAmount();
         emit IncreaseReservedAmount(_token, _isLong, _amount);
     }
 
@@ -1285,7 +1195,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
     // we have this validation as a function instead of a modifier to reduce contract size
     function _onlyGov() private view {
-        _validate(msg.sender == gov, 53);
+        if (msg.sender != gov) revert Vault_OnlyGov();
     }
 
     // we have this validation as a function instead of a modifier to reduce contract size
@@ -1295,7 +1205,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
 
     // we have this validation as a function instead of a modifier to reduce contract size
     function _validateBrrrManager() private view {
-        _validate(msg.sender == brrrManager, 31);
+        if (msg.sender != brrrManager) revert Vault_OnlyBrrrManager();
     }
 
     // we have this validation as a function instead of a modifier to reduce contract size
@@ -1303,11 +1213,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         if (maxGasPrice == 0) {
             return;
         }
-        _validate(tx.gasprice <= maxGasPrice, 32);
-    }
-
-    function _validate(bool _condition, uint256 _errorCode) private view {
-        require(_condition, errors[_errorCode]);
+        if (tx.gasprice > maxGasPrice) revert Vault_MaxGasPrice();
     }
 
     function _adjustForRawDecimals(uint256 _amount, uint256 _decimalsDiv, uint256 _decimalsMul)
@@ -1324,8 +1230,8 @@ contract Vault is ReentrancyGuard, IVaultPyth {
     }
 
     function getMaxLeverage(address token) public view override returns (uint256 _maxLeverage) {
-        if (maxLeveragePerToken[token] != 0) {
-            return maxLeveragePerToken[token];
+        if (maxLeverages[token] != 0) {
+            return maxLeverages[token];
         }
         return maxLeverage;
     }

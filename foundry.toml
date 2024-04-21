@@ -3,7 +3,6 @@ src = "src"
 out = "out"
 libs = ["lib"]
 remappings = [
-    "@chainlink/contracts=lib/chainlink/contracts/src/v0.6/",
     '@openzeppelin/contracts=lib/openzeppelin-contracts/contracts/',
     "@pythnetwork/pyth-sdk-solidity/=lib/pyth-sdk-solidity/",
     "@redstone-finance/evm-connector/dist/contracts/=lib/redstone-oracles-monorepo/packages/evm-connector/contracts/",

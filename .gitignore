@@ -3,6 +3,6 @@ cache
 broadcast
 node_modules
 out
+lib
 script
-updatePoints.js
-wallets.txt
+.DS_Store

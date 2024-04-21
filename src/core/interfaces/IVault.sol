@@ -2,11 +2,119 @@
 pragma solidity ^0.8.20;
 
 interface IVault {
+    struct Position {
+        uint256 size;
+        uint256 collateral;
+        uint256 averagePrice;
+        uint256 entryFundingRate;
+        uint256 reserveAmount;
+        int256 realisedPnl;
+        uint256 lastIncreasedTime;
+    }
+
+    event LiquidityAdded(uint256 tokenAmount, uint256 usdpAmount, uint256 feeBasisPoints);
+    event LiquidityRemoved(uint256 usdpAmount, uint256 tokenAmount, uint256 feeBasisPoints);
+
+    event IncreasePosition(
+        bytes32 key,
+        address account,
+        address indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price,
+        uint256 fee
+    );
+    event DecreasePosition(
+        bytes32 key,
+        address account,
+        address indexToken,
+        uint256 collateralDelta,
+        uint256 sizeDelta,
+        bool isLong,
+        uint256 price,
+        uint256 fee
+    );
+    event LiquidatePosition(
+        bytes32 key,
+        address account,
+        address indexToken,
+        bool isLong,
+        uint256 size,
+        uint256 collateral,
+        uint256 reserveAmount,
+        int256 realisedPnl,
+        uint256 markPrice
+    );
+    event UpdatePosition(
+        bytes32 key,
+        uint256 size,
+        uint256 collateral,
+        uint256 averagePrice,
+        uint256 entryFundingRate,
+        uint256 reserveAmount,
+        int256 realisedPnl,
+        uint256 markPrice
+    );
+    event ClosePosition(
+        bytes32 key,
+        uint256 size,
+        uint256 collateral,
+        uint256 averagePrice,
+        uint256 entryFundingRate,
+        uint256 reserveAmount,
+        int256 realisedPnl
+    );
+
+    event UpdateFundingRate(address indexed token, bool indexed isLong, uint256 fundingRate);
+    event UpdatePnl(bytes32 key, bool hasProfit, uint256 delta);
+
+    event CollectMarginFees(uint256 feeUsd, uint256 feeTokens);
+
+    event DirectPoolDeposit(uint256 amount);
+    event IncreasePoolAmount(uint256 amount);
+    event DecreasePoolAmount(uint256 amount);
+    event IncreaseUsdpAmount(uint256 amount);
+    event DecreaseUsdpAmount(uint256 amount);
+    event IncreaseReservedAmount(address indexed token, bool indexed isLong, uint256 amount);
+    event DecreaseReservedAmount(address indexed token, bool indexed isLong, uint256 amount);
+
+    error Vault_AlreadyInitialized();
+    error Vault_LiquidationFee();
+    error Vault_FundingRateFactor();
+    error Vault_MaxLeverage();
+    error Vault_TokenNotWhitelisted();
+    error Vault_TaxBasisPoints();
+    error Vault_MintBurnFeeBasisPoints();
+    error Vault_MarginFeeBasisPoints();
+    error Vault_FundingInterval();
+    error Vault_ZeroAmount();
+    error Vault_ZeroSize();
+    error Vault_InsufficientCollateral();
+    error Vault_InsufficientSize();
+    error Vault_LossesExceedCollateral();
+    error Vault_FeesExceedCollateral();
+    error Vault_LiquidationFeesExceedCollateral();
+    error Vault_MaxLeverageExceeded();
+    error Vault_NotLiquidator();
+    error Vault_NotLiquidatable();
+    error Vault_LeverageDisabled();
+    error Vault_ZeroCollateral();
+    error Vault_AveragePriceZero();
+    error Vault_NonZeroCollateral();
+    error Vault_OnlyGov();
+    error Vault_OnlyBrrrManager();
+    error Vault_MaxGasPrice();
+    error Vault_CollateralExceedsSize();
+    error Vault_UnapprovedRouter();
+    error Vault_TokenNotShortable();
+    error Vault_PoolAmount();
+    error Vault_ReservedAmount();
+    error Vault_MaxUsdpAmount();
+
     function isInitialized() external view returns (bool);
 
     function isLeverageEnabled() external view returns (bool);
-
-    function setError(uint256 _errorCode, string calldata _error) external;
 
     function router() external view returns (address);
 
