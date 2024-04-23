@@ -1,8 +1,10 @@
 .env
+.env.enc
 cache
 broadcast
 node_modules
 out
 lib
 script
+modules
 .DS_Store

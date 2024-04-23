@@ -19,6 +19,7 @@ import {BRRR} from "../../../src/core/BRRR.sol";
 import {BrrrManager} from "../../../src/core/BrrrManager.sol";
 import {WBTC} from "../mocks/WBTC.sol";
 import {WETH} from "../../../src/tokens/WETH.sol";
+import {IERC20} from "../../../src/libraries/token/IERC20.sol";
 import {ReferralStorage} from "../../../src/referrals/ReferralStorage.sol";
 import {BrrrRewardRouter} from "../../../src/staking/BrrrRewardRouter.sol";
 import {RewardTracker} from "../../../src/staking/RewardTracker.sol";
@@ -38,7 +39,7 @@ import {RewardClaimer} from "../../../src/staking/RewardClaimer.sol";
 
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 
-contract TestPositions is Test {
+contract TestAccounting is Test {
     address public OWNER;
     address public USER = makeAddr("user");
 
@@ -171,96 +172,163 @@ contract TestPositions is Test {
         _;
     }
 
-    function test_deployment() public view {
-        console.log("Success");
+    struct Accounting {
+        uint256 feeReserve;
+        uint256 tokenBalance;
+        uint256 reservedAmount;
+        uint256 totalReserved;
+        uint256 globalSize;
+        uint256 globalAveragePrice;
     }
 
-    function test_requesting_a_position(uint256 _amountIn, uint256 _leverage, bool _isLong) public giveUserCurrency {
-        _amountIn = bound(_amountIn, 10e6, 1_000_000_000e6); // 1 - 1 billion usdc
-        _leverage = bound(_leverage, 1, 50); // 1 - 50
-        vm.startPrank(OWNER);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), _amountIn);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            weth,
-            _amountIn,
-            0,
-            _amountIn * _leverage * 1e24, // Conver USDC to USD
-            _isLong,
-            _isLong ? 3500e30 : 2500e30,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
-        );
-        vm.stopPrank();
-    }
-
-    function test_executing_a_position(uint256 _amountIn, uint256 _leverage, bool _isLong) public giveUserCurrency {
-        _amountIn = bound(_amountIn, 10e6, 1_000_000_000e6); // 1 - 1 billion usdc
-        _leverage = bound(_leverage, 1, 48); // 1 - 50
-        vm.startPrank(OWNER);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), _amountIn);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            weth,
-            _amountIn,
-            0,
-            _amountIn * _leverage * 1e24, // Conver USDC to USD
-            _isLong,
-            _isLong ? 3500e30 : 2500e30,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
-        );
-        vm.stopPrank();
-
-        // Execute the position
-
-        vm.prank(OWNER);
-        positionRouter.executeIncreasePositions(1, payable(OWNER));
-    }
-
-    function test_liquidation_a_position_that_goes_under(uint256 _liquidationPrice, bool _isLong)
+    function test_vault_accounting_updates_for_positions(uint256 _amountIn, uint256 _leverage, bool _isLong)
         public
         giveUserCurrency
     {
-        if (_isLong) {
-            _liquidationPrice = bound(_liquidationPrice, 100, 2500); // 0 - 3000
-        } else {
-            _liquidationPrice = bound(_liquidationPrice, 4000, 10_000); // 0 - 60000
-        }
+        // store the vault accounting before
+        Accounting memory accountingBefore;
+        accountingBefore.feeReserve = vault.feeReserve();
+        accountingBefore.tokenBalance = vault.tokenBalances(usdc);
+        accountingBefore.reservedAmount = vault.reservedAmounts(weth, _isLong);
+        accountingBefore.totalReserved = vault.totalReservedAmount();
+        accountingBefore.globalSize = _isLong ? vault.globalLongSizes(weth) : vault.globalShortSizes(weth);
+        accountingBefore.globalAveragePrice =
+            _isLong ? vault.globalLongAveragePrices(weth) : vault.globalShortAveragePrices(weth);
+
+        // create and execute a position
+        _amountIn = bound(_amountIn, 10e6, 1_000_000_000e6); // 1 - 1 billion usdc
+        _leverage = bound(_leverage, 1, 40); // 1 - 40
         vm.startPrank(OWNER);
         router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), 100_000e6);
+        Token(usdc).approve(address(router), _amountIn);
+        uint256 sizeDelta = _amountIn * _leverage * 1e24;
         positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
             weth,
-            100_000e6,
+            _amountIn,
             0,
-            1_000_000e30,
+            sizeDelta, // Convert USDC to USD
             _isLong,
             _isLong ? 3500e30 : 2500e30,
             positionRouter.minExecutionFee(),
             bytes32(0),
             address(0)
         );
+        positionRouter.executeIncreasePositions(1, payable(OWNER));
         vm.stopPrank();
 
-        // Execute the position
+        // check the vault accounting after
+        Accounting memory accountingAfter;
+        accountingAfter.feeReserve = vault.feeReserve();
+        accountingAfter.tokenBalance = vault.tokenBalances(usdc);
+        accountingAfter.reservedAmount = vault.reservedAmounts(weth, _isLong);
+        accountingAfter.totalReserved = vault.totalReservedAmount();
+        accountingAfter.globalSize = _isLong ? vault.globalLongSizes(weth) : vault.globalShortSizes(weth);
+        accountingAfter.globalAveragePrice =
+            _isLong ? vault.globalLongAveragePrices(weth) : vault.globalShortAveragePrices(weth);
 
-        vm.prank(OWNER);
+        // Get the position
+        (
+            uint256 size, // 0
+            , // 1
+            uint256 averagePrice, // 2
+            , // 3
+            , // 4
+            , // 5
+            , // 6
+                // 7
+        ) = vault.getPosition(OWNER, weth, _isLong);
+
+        // Fee reserve should increase
+        assertGt(accountingAfter.feeReserve, accountingBefore.feeReserve, "Fee reserve should increase");
+        // Token balance should increase
+        assertGt(accountingAfter.tokenBalance, accountingBefore.tokenBalance, "Token balance should increase");
+        // Reserved amount should increase
+        assertGt(accountingAfter.reservedAmount, accountingBefore.reservedAmount, "Reserved amount should increase");
+        // Total reserved amount should increase
+        assertGt(accountingAfter.totalReserved, accountingBefore.totalReserved, "Total reserved amount should increase");
+        // Global size should increase
+        assertEq(accountingAfter.globalSize, accountingBefore.globalSize + size, "Global size should increase");
+        // Global average price should be updated
+        assertEq(accountingAfter.globalAveragePrice, averagePrice, "Global average price should be updated");
+    }
+
+    function test_accounting_when_paying_profitable_positions(
+        uint256 _amountIn,
+        uint256 _leverage,
+        uint256 _profitPrice,
+        bool _isLong
+    ) public giveUserCurrency {
+        // create and execute a position
+        _amountIn = bound(_amountIn, 10e6, 1_000_000e6); // 1 - 1 million usdc
+        _leverage = bound(_leverage, 1, 40); // 1 - 40
+        vm.startPrank(OWNER);
+        router.approvePlugin(address(positionRouter));
+        Token(usdc).approve(address(router), _amountIn);
+        uint256 sizeDelta = _amountIn * _leverage * 1e24;
+        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
+            weth,
+            _amountIn,
+            0,
+            sizeDelta, // Convert USDC to USD
+            _isLong,
+            _isLong ? 3500e30 : 2500e30,
+            positionRouter.minExecutionFee(),
+            bytes32(0),
+            address(0)
+        );
         positionRouter.executeIncreasePositions(1, payable(OWNER));
-        int64 liqPrice = int64(uint64(_liquidationPrice));
+        vm.stopPrank();
+
+        // Get the position
+        (
+            uint256 size, // 0
+            uint256 collateral, // 1
+            , // 2
+            , // 3
+            , // 4
+            , // 5
+            , // 6
+                // 7
+        ) = vault.getPosition(OWNER, weth, _isLong);
+        // Collateral has 30 Dp --> to convert to USDC need to divide by 1e24
+        uint256 collateralUsdc = collateral / 1e24;
+
+        // Move the price so that the position is profitable
+        int64 profitPrice;
+        if (_isLong) {
+            _profitPrice = bound(_profitPrice, 3500, 10_000); // $3500 - $10,000
+            profitPrice = int64(uint64(_profitPrice));
+        } else {
+            _profitPrice = bound(_profitPrice, 1000, 2500); // $100 - $2500
+            profitPrice = int64(uint64(_profitPrice));
+        }
 
         skip(180);
 
-        // Move the price so that it's liquidatiable
-        bytes memory ethPriceData =
-            pyth.createPriceFeedUpdateData(bytes32(bytes("ETH")), liqPrice, 0, 0, liqPrice, 0, uint64(block.timestamp));
+        bytes memory ethPriceData = pyth.createPriceFeedUpdateData(
+            bytes32(bytes("ETH")), profitPrice, 0, 0, profitPrice, 0, uint64(block.timestamp)
+        );
+
         updateData[0] = ethPriceData;
         pyth.updatePriceFeeds(updateData);
 
-        // Liquidate the position
-        vm.prank(OWNER);
-        positionManager.liquidatePosition(OWNER, weth, _isLong, OWNER);
+        uint256 balanceBeforeDecrease = IERC20(usdc).balanceOf(OWNER);
+        uint256 tokenBalanceBefore = vault.tokenBalances(usdc);
+
+        // Create a decrease position request
+        uint256 acceptablePrice = _isLong ? (_profitPrice * 1e30) * 9 / 10 : (_profitPrice * 1e30) * 11 / 10;
+        vm.startPrank(OWNER);
+        positionRouter.createDecreasePosition{value: positionRouter.minExecutionFee()}(
+            weth, 0, size, _isLong, OWNER, acceptablePrice, 0, positionRouter.minExecutionFee(), address(0)
+        );
+        // Execute the decrease position
+        positionRouter.executeDecreasePositions(1, payable(OWNER));
+        vm.stopPrank();
+
+        uint256 tokenBalanceAfter = vault.tokenBalances(usdc);
+        uint256 balanceDelta = IERC20(usdc).balanceOf(OWNER) - balanceBeforeDecrease;
+        // User should receive more than their collateral as a result of profit.
+        assertGt(balanceDelta, collateralUsdc);
+        assertEq(tokenBalanceBefore - tokenBalanceAfter, balanceDelta);
     }
 }

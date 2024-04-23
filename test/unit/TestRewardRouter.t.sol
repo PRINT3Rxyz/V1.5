@@ -38,7 +38,7 @@ import {RewardClaimer} from "../../../src/staking/RewardClaimer.sol";
 
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 
-contract TestPositions is Test {
+contract TestRewardRouter is Test {
     address public OWNER;
     address public USER = makeAddr("user");
 
@@ -143,9 +143,9 @@ contract TestPositions is Test {
 
         // Create and set pyth prices for each token
         bytes memory ethPrice =
-            pyth.createPriceFeedUpdateData(bytes32(bytes("ETH")), 3_000, 0, 0, 3_000, 0, uint64(block.timestamp));
+            pyth.createPriceFeedUpdateData(bytes32(bytes("ETH")), 3000, 0, 0, 3000, 0, uint64(block.timestamp));
         bytes memory btcPrice =
-            pyth.createPriceFeedUpdateData(bytes32(bytes("BTC")), 60_000, 0, 0, 60_000, 0, uint64(block.timestamp));
+            pyth.createPriceFeedUpdateData(bytes32(bytes("BTC")), 60000, 0, 0, 60000, 0, uint64(block.timestamp));
         bytes memory usdcPrice =
             pyth.createPriceFeedUpdateData(bytes32(bytes("USDC")), 1, 0, 0, 1, 0, uint64(block.timestamp));
 
@@ -171,96 +171,41 @@ contract TestPositions is Test {
         _;
     }
 
-    function test_deployment() public view {
-        console.log("Success");
-    }
+    function testMintAndStakingBrrr(uint256 _amountIn) public giveUserCurrency {
+        _amountIn = bound(_amountIn, 1e6, Token(usdc).balanceOf(OWNER));
 
-    function test_requesting_a_position(uint256 _amountIn, uint256 _leverage, bool _isLong) public giveUserCurrency {
-        _amountIn = bound(_amountIn, 10e6, 1_000_000_000e6); // 1 - 1 billion usdc
-        _leverage = bound(_leverage, 1, 50); // 1 - 50
-        vm.startPrank(OWNER);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), _amountIn);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            weth,
-            _amountIn,
-            0,
-            _amountIn * _leverage * 1e24, // Conver USDC to USD
-            _isLong,
-            _isLong ? 3500e30 : 2500e30,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
-        );
-        vm.stopPrank();
-    }
+        uint256 brrrBalanceBefore = rewardTracker.balanceOf(OWNER);
 
-    function test_executing_a_position(uint256 _amountIn, uint256 _leverage, bool _isLong) public giveUserCurrency {
-        _amountIn = bound(_amountIn, 10e6, 1_000_000_000e6); // 1 - 1 billion usdc
-        _leverage = bound(_leverage, 1, 48); // 1 - 50
         vm.startPrank(OWNER);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), _amountIn);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            weth,
-            _amountIn,
-            0,
-            _amountIn * _leverage * 1e24, // Conver USDC to USD
-            _isLong,
-            _isLong ? 3500e30 : 2500e30,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
-        );
+        Token(usdc).approve(address(brrrManager), type(uint256).max);
+        rewardRouter.mintAndStakeBrrr(_amountIn, 0, 0);
         vm.stopPrank();
 
-        // Execute the position
+        uint256 brrrBalanceAfter = rewardTracker.balanceOf(OWNER);
 
-        vm.prank(OWNER);
-        positionRouter.executeIncreasePositions(1, payable(OWNER));
+        assertGt(brrrBalanceAfter, brrrBalanceBefore, "Balance must increase");
     }
 
-    function test_liquidation_a_position_that_goes_under(uint256 _liquidationPrice, bool _isLong)
-        public
-        giveUserCurrency
-    {
-        if (_isLong) {
-            _liquidationPrice = bound(_liquidationPrice, 100, 2500); // 0 - 3000
-        } else {
-            _liquidationPrice = bound(_liquidationPrice, 4000, 10_000); // 0 - 60000
-        }
+    function testUnstakingAndRedeemingBrrr(uint256 _amountIn) public giveUserCurrency {
+        _amountIn = bound(_amountIn, 1e6, 1_000_000_000e6);
+
         vm.startPrank(OWNER);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), 100_000e6);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            weth,
-            100_000e6,
-            0,
-            1_000_000e30,
-            _isLong,
-            _isLong ? 3500e30 : 2500e30,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
-        );
+        Token(usdc).approve(address(brrrManager), type(uint256).max);
+        rewardRouter.mintAndStakeBrrr(_amountIn, 0, 0);
         vm.stopPrank();
 
-        // Execute the position
+        uint256 brrrBalanceBefore = rewardTracker.balanceOf(OWNER);
+        uint256 tokenBalanceBefore = Token(usdc).balanceOf(OWNER);
 
-        vm.prank(OWNER);
-        positionRouter.executeIncreasePositions(1, payable(OWNER));
-        int64 liqPrice = int64(uint64(_liquidationPrice));
+        vm.startPrank(OWNER);
+        rewardTracker.approve(address(brrrManager), type(uint256).max);
+        rewardRouter.unstakeAndRedeemBrrr(brrrBalanceBefore, 0, OWNER);
+        vm.stopPrank();
 
-        skip(180);
+        uint256 brrrBalanceAfter = rewardTracker.balanceOf(OWNER);
+        uint256 tokenBalanceAfter = Token(usdc).balanceOf(OWNER);
 
-        // Move the price so that it's liquidatiable
-        bytes memory ethPriceData =
-            pyth.createPriceFeedUpdateData(bytes32(bytes("ETH")), liqPrice, 0, 0, liqPrice, 0, uint64(block.timestamp));
-        updateData[0] = ethPriceData;
-        pyth.updatePriceFeeds(updateData);
-
-        // Liquidate the position
-        vm.prank(OWNER);
-        positionManager.liquidatePosition(OWNER, weth, _isLong, OWNER);
+        assertLt(brrrBalanceAfter, brrrBalanceBefore, "Balance must decrease");
+        assertGt(tokenBalanceAfter, tokenBalanceBefore, "Balance must increase");
     }
 }

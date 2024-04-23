@@ -46,12 +46,12 @@ contract PositionManager is BasePositionManager {
     constructor(
         address _vault,
         address _router,
-        address _shortsTracker,
         address _collateralToken,
+        address _shortsTracker,
         uint256 _depositFee,
         address _orderBook,
         bool _shouldValidateIncreaseOrder
-    ) BasePositionManager(_vault, _router, _shortsTracker, _collateralToken, _depositFee) {
+    ) BasePositionManager(_vault, _router, _collateralToken, _shortsTracker, _depositFee) {
         orderBook = _orderBook;
         shouldValidateIncreaseOrder = _shouldValidateIncreaseOrder;
     }
