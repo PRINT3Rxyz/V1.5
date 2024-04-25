@@ -8,8 +8,12 @@ import "./interfaces/IFastPriceFeed.sol";
 import "./interfaces/ISecondaryPriceFeed.sol";
 import "../core/interfaces/IVaultPriceFeed.sol";
 import "../core/interfaces/IPositionRouter.sol";
+import {SafeTransferLib} from "../libraries/token/SafeTransferLib.sol";
+import {PythUtils} from "./PythUtils.sol";
 
 contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
+    using PythUtils for PythStructs.Price;
+
     uint256 public constant PRICE_PRECISION = 10 ** 30;
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
 
@@ -72,8 +76,7 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
         pyth.updatePriceFeeds{value: fee}(priceUpdateData);
 
         if (address(this).balance != 0) {
-            (bool success,) = refundee.call{value: address(this).balance}("");
-            require(success, "FastPriceFeed: Refund failed");
+            SafeTransferLib.safeTransferETH(refundee, address(this).balance);
         }
     }
 
@@ -84,7 +87,7 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
         uint256 _endIndexForDecreasePositions,
         uint256 _maxIncreasePositions,
         uint256 _maxDecreasePositions
-    ) external onlyUpdater {
+    ) external payable onlyUpdater {
         uint256 fee = pyth.getUpdateFee(_priceUpdateData);
         pyth.updatePriceFeeds{value: fee}(_priceUpdateData);
 
@@ -112,7 +115,7 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
     function getPrice(address _token, uint256 _refPrice, bool _maximize) external view override returns (uint256) {
         PythStructs.Price memory price = pyth.getPriceNoOlderThan(pythIds[_token], maxTimeDeviation);
 
-        uint256 pythPrice = (uint256(uint64(price.price)) * PRICE_PRECISION) / (10 ** uint32(-price.expo));
+        uint256 pythPrice = price.extractPrice();
 
         return _getPrice(_refPrice, pythPrice, _maximize);
     }

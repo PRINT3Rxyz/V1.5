@@ -128,7 +128,7 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         priceFeed = _priceFeed;
 
         isLeverageEnabled = true;
-        maxLeverage = 50 * 10000; // 50x
+        maxLeverage = 100 * 10000; // 100x
         taxBasisPoints = 50; // 0.5%
         mintBurnFeeBasisPoints = 30; // 0.3%
         marginFeeBasisPoints = 10; // 0.1%

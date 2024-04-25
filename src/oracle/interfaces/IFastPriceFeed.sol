@@ -19,5 +19,5 @@ interface IFastPriceFeed {
         uint256 _endIndexForDecreasePositions,
         uint256 _maxIncreasePositions,
         uint256 _maxDecreasePositions
-    ) external;
+    ) external payable;
 }
