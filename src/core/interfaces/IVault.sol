@@ -111,6 +111,7 @@ interface IVault {
     error Vault_PoolAmount();
     error Vault_ReservedAmount();
     error Vault_MaxUsdpAmount();
+    error Vault_ArrayLength();
 
     function isInitialized() external view returns (bool);
 
@@ -158,7 +159,11 @@ interface IVault {
 
     function setUsdpAmount(uint256 _amount) external;
 
-    function setMaxGlobalSize(address _token, uint256 _longAmount, uint256 _shortAmount) external;
+    function setMaxGlobalSizes(
+        address[] calldata _tokens,
+        uint256[] calldata _longAmounts,
+        uint256[] calldata _shortAmounts
+    ) external;
 
     function setLiquidator(address _liquidator, bool _isActive) external;
 

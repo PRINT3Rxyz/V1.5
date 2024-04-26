@@ -195,8 +195,6 @@ contract PositionManager is BasePositionManager {
             ,
         ) = IOrderBook(orderBook).getIncreaseOrder(_account, _orderIndex);
 
-        _validateMaxGlobalSize(_indexToken, _isLong, _sizeDelta);
-
         if (!shouldValidateIncreaseOrder) {
             return;
         }

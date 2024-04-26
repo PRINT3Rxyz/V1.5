@@ -38,8 +38,6 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
 
     uint256 public feeReserve;
 
-    mapping(address => uint256) public override maxGlobalLongSizes;
-    mapping(address => uint256) public override maxGlobalShortSizes;
     mapping(address => bool) public isHandler;
 
     event SetHandler(address indexed handler, bool isHandler);
@@ -113,19 +111,6 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
         emit SetReferralStorage(_referralStorage);
     }
 
-    function setMaxGlobalSizes(address[] memory _tokens, uint256[] memory _longSizes, uint256[] memory _shortSizes)
-        external
-        onlyHandlerAndAbove
-    {
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            address token = _tokens[i];
-            maxGlobalLongSizes[token] = _longSizes[i];
-            maxGlobalShortSizes[token] = _shortSizes[i];
-        }
-
-        emit SetMaxGlobalSizes(_tokens, _longSizes, _shortSizes);
-    }
-
     function withdrawFees(address _receiver) external onlyHandlerAndAbove {
         uint256 amount = feeReserve;
         if (amount == 0) {
@@ -146,25 +131,6 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
         _receiver.safeTransferETH(_amount);
     }
 
-    function _validateMaxGlobalSize(address _indexToken, bool _isLong, uint256 _sizeDelta) internal view {
-        if (_sizeDelta == 0) {
-            return;
-        }
-
-        if (_isLong) {
-            uint256 maxGlobalLongSize = maxGlobalLongSizes[_indexToken];
-            if (maxGlobalLongSize > 0 && IVault(vault).globalLongSizes(_indexToken) + _sizeDelta > maxGlobalLongSize) {
-                revert("BasePositionManager: max global longs exceeded");
-            }
-        } else {
-            uint256 maxGlobalShortSize = maxGlobalShortSizes[_indexToken];
-            if (maxGlobalShortSize > 0 && IVault(vault).globalShortSizes(_indexToken) + _sizeDelta > maxGlobalShortSize)
-            {
-                revert("BasePositionManager: max global shorts exceeded");
-            }
-        }
-    }
-
     function _increasePosition(address _account, address _indexToken, uint256 _sizeDelta, bool _isLong, uint256 _price)
         internal
     {
@@ -176,8 +142,6 @@ contract BasePositionManager is IBasePositionManager, ReentrancyGuard, Governabl
         } else {
             require(markPrice >= _price, "BasePositionManager: mark price lower than limit");
         }
-
-        _validateMaxGlobalSize(_indexToken, _isLong, _sizeDelta);
 
         address timelock = IVault(_vault).gov();
 

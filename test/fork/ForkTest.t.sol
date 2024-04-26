@@ -131,7 +131,7 @@ contract ForkTest is Test {
         assertNotEq(collateral, 0, "Collateral is 0");
     }
 
-    function fork_test_liquidation_a_position_that_goes_under(uint256 _liquidationPrice, bool _isLong)
+    function test_liquidation_a_position_that_goes_under_forked(uint256 _liquidationPrice, bool _isLong)
         public
         giveUserCurrency
     {

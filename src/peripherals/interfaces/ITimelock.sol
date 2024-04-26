@@ -14,4 +14,11 @@ interface ITimelock is IAdmin {
     function setIsLeverageEnabled(address _vault, bool _isLeverageEnabled) external;
 
     function signalSetGov(address _target, address _gov) external;
+
+    function setMaxGlobalSizes(
+        address _vault,
+        address[] calldata _tokens,
+        uint256[] calldata _longAmounts,
+        uint256[] calldata _shortAmounts
+    ) external;
 }

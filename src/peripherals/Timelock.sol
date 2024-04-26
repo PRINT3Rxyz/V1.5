@@ -276,11 +276,15 @@ contract Timelock is ITimelock {
         IBrrrManager(brrrManager).setCooldownDuration(_cooldownDuration);
     }
 
-    function setMaxGlobalSize(address _vault, address _token, uint256 _longAmount, uint256 _shortAmount)
-        external
-        onlyAdmin
-    {
-        IVault(_vault).setMaxGlobalSize(_token, _longAmount, _shortAmount);
+    /// @dev - Sets the maxmimum allowed open interest in USD for a given token
+    /// Values to 30 decimal places --> e.g $20,000 = 20_000e30
+    function setMaxGlobalSizes(
+        address _vault,
+        address[] calldata _tokens,
+        uint256[] calldata _longAmounts,
+        uint256[] calldata _shortAmounts
+    ) external onlyKeeperAndAbove {
+        IVault(_vault).setMaxGlobalSizes(_tokens, _longAmounts, _shortAmounts);
     }
 
     function removeAdmin(address _token, address _account) external onlyAdmin {

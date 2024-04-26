@@ -38,7 +38,7 @@ import {RewardClaimer} from "../../../src/staking/RewardClaimer.sol";
 
 import {MockPyth} from "@pythnetwork/pyth-sdk-solidity/MockPyth.sol";
 
-contract Handler is Test {
+contract LiquidityHandler is Test {
     address public OWNER;
     address public USER = makeAddr("user");
 
@@ -90,7 +90,7 @@ contract Handler is Test {
 
     receive() external payable {}
 
-    function setUp() public {
+    constructor() {
         DeployP3 deployScript = new DeployP3(); // Create a new instance of the DeployP3 script
         contracts = deployScript.run(); // Run the script and store the returned contracts
         OWNER = contracts.deployer;
@@ -158,23 +158,17 @@ contract Handler is Test {
         vm.stopPrank();
     }
 
-    modifier giveUserCurrency() {
-        vm.deal(OWNER, LARGE_AMOUNT);
-        vm.deal(USER, 1e18 ether);
-        vm.prank(USER);
-        WETH(weth).deposit{value: LARGE_AMOUNT}();
-        vm.startPrank(OWNER);
-        WBTC(wbtc).mint(USER, LARGE_AMOUNT);
-        Token(usdc).mint(USER, LARGE_AMOUNT);
-        vm.stopPrank();
+    function add_liquidity(uint256 _amount, uint256 _btcPrice, uint256 _ethPrice) public {
+        _amount = bound(_amount, 100000, DEPOSIT_AMOUNT);
+        _btcPrice = bound(_btcPrice, 1, 100_000);
+        _ethPrice = bound(_ethPrice, 1, 10_000);
 
-        _;
-    }
+        Token(usdc).mint(msg.sender, LARGE_AMOUNT);
+        vm.deal(msg.sender, LARGE_AMOUNT);
 
-    modifier updatePricesAndExecute(uint256 _btcPrice, uint256 _ethPrice) {
-        _;
-        bound(_btcPrice, 1, 100_000);
-        bound(_ethPrice, 1, 10_000);
+        uint256 usdcBalBefore = Token(usdc).balanceOf(msg.sender);
+        uint256 stakedBalBefore = rewardTracker.balanceOf(msg.sender);
+
         updateData[0] = pyth.createPriceFeedUpdateData(
             bytes32(bytes("ETH")), int64(uint64(_ethPrice)), 0, 0, int64(uint64(_ethPrice)), 0, uint64(block.timestamp)
         );
@@ -182,28 +176,46 @@ contract Handler is Test {
             bytes32(bytes("BTC")), int64(uint64(_btcPrice)), 0, 0, int64(uint64(_btcPrice)), 0, uint64(block.timestamp)
         );
         vm.prank(OWNER);
-        fastPriceFeed.setPricesAndExecute(address(positionRouter), updateData, 100, 100, 100, 100);
+        pyth.updatePriceFeeds(updateData);
+
+        vm.startPrank(msg.sender);
+        Token(usdc).approve(address(brrrManager), _amount);
+        rewardRouter.mintAndStakeBrrr(_amount, 0, 0);
+        vm.stopPrank();
+
+        uint256 usdcBalAfter = Token(usdc).balanceOf(msg.sender);
+        uint256 stakedBalAfter = rewardTracker.balanceOf(msg.sender);
+        assertEq(usdcBalBefore - usdcBalAfter, _amount);
+        assertGt(stakedBalAfter, stakedBalBefore);
     }
 
-    function create_position(uint256 _amountIn, uint256 _leverage, bool _isLong) public giveUserCurrency {
-        _amountIn = bound(_amountIn, 10e6, 1_000_000e6); // 1 - 1 billion usdc
-        _leverage = bound(_leverage, 1, 50); // 1 - 50
-        Token(usdc).mint(msg.sender, LARGE_AMOUNT);
-        router.approvePlugin(address(positionRouter));
-        Token(usdc).approve(address(router), _amountIn);
-        address indexToken = _amountIn % 2 == 0 ? wbtc : weth;
-        // Get the current price --> if is long, add a percentage, if short, subtract a percentage
-        uint256 tokenPrice = priceFeed.getPrimaryPrice(indexToken, true);
-        positionRouter.createIncreasePosition{value: positionRouter.minExecutionFee()}(
-            indexToken,
-            _amountIn,
-            0,
-            _amountIn * _leverage * 1e24, // Convert USDC to USD
-            _isLong,
-            _isLong ? (tokenPrice * 12) / 10 : (tokenPrice * 8) / 10,
-            positionRouter.minExecutionFee(),
-            bytes32(0),
-            address(0)
+    function remove_liquidity(uint256 _amount, uint256 _btcPrice, uint256 _ethPrice) public {
+        uint256 rewardTrackerBalBefore = rewardTracker.balanceOf(msg.sender);
+        if (rewardTrackerBalBefore == 0) return;
+
+        _amount = bound(_amount, 1, rewardTrackerBalBefore);
+        _btcPrice = bound(_btcPrice, 1, 100_000);
+        _ethPrice = bound(_ethPrice, 1, 10_000);
+
+        uint256 usdcBalBefore = Token(usdc).balanceOf(msg.sender);
+
+        updateData[0] = pyth.createPriceFeedUpdateData(
+            bytes32(bytes("ETH")), int64(uint64(_ethPrice)), 0, 0, int64(uint64(_ethPrice)), 0, uint64(block.timestamp)
         );
+        updateData[1] = pyth.createPriceFeedUpdateData(
+            bytes32(bytes("BTC")), int64(uint64(_btcPrice)), 0, 0, int64(uint64(_btcPrice)), 0, uint64(block.timestamp)
+        );
+        vm.prank(OWNER);
+        pyth.updatePriceFeeds(updateData);
+
+        vm.startPrank(msg.sender);
+        rewardTracker.approve(address(brrrManager), rewardTrackerBalBefore);
+        rewardRouter.unstakeAndRedeemBrrr(_amount, 0, msg.sender);
+        vm.stopPrank();
+
+        uint256 usdcBalAfter = Token(usdc).balanceOf(msg.sender);
+        uint256 rewardTrackerBalAfter = rewardTracker.balanceOf(msg.sender);
+        assertGt(usdcBalAfter, usdcBalBefore);
+        assertEq(rewardTrackerBalBefore - rewardTrackerBalAfter, _amount);
     }
 }

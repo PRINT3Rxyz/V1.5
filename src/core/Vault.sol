@@ -186,10 +186,21 @@ contract Vault is ReentrancyGuard, IVaultPyth {
         maxLeverages[_token] = _maxLeverage;
     }
 
-    function setMaxGlobalSize(address _token, uint256 _longAmount, uint256 _shortAmount) external override {
+    function setMaxGlobalSizes(
+        address[] calldata _tokens,
+        uint256[] calldata _longAmounts,
+        uint256[] calldata _shortAmounts
+    ) external override {
         _onlyGov();
-        maxGlobalLongSizes[_token] = _longAmount;
-        maxGlobalShortSizes[_token] = _shortAmount;
+        uint16 len = uint16(_tokens.length);
+        if (len != _longAmounts.length || len != _shortAmounts.length) revert Vault_ArrayLength();
+        for (uint16 i = 0; i < len;) {
+            maxGlobalLongSizes[_tokens[i]] = _longAmounts[i];
+            maxGlobalShortSizes[_tokens[i]] = _shortAmounts[i];
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function setFees(

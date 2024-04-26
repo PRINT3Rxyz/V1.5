@@ -2,13 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import {Handler} from "./handler/Handler.sol";
+import {PositionHandler} from "./handler/PositionHandler.sol";
 
 contract TestPositions is Test {
-    Handler handler;
+    PositionHandler handler;
 
     function setUp() public {
-        handler = new Handler();
+        handler = new PositionHandler();
         targetContract(address(handler));
     }
 

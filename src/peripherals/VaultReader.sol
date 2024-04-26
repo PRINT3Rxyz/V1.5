@@ -12,7 +12,7 @@ contract VaultReader {
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant FUNDING_RATE_PRECISION = 1000000;
 
-    function getVaultTokenInfo(address _vault, address _positionManager, address _weth, address[] memory _tokens)
+    function getVaultTokenInfo(address _vault, address _weth, address[] memory _tokens)
         public
         view
         returns (uint256[] memory amounts, uint256 poolAmount, uint256 usdpAmount, uint256 maxUsdpAmount)
@@ -20,7 +20,6 @@ contract VaultReader {
         uint256 propsLength = 6;
 
         IVaultPyth vault = IVaultPyth(_vault);
-        IBasePositionManager positionManager = IBasePositionManager(_positionManager);
 
         poolAmount = vault.poolAmount();
         usdpAmount = vault.usdpAmount();
@@ -37,8 +36,8 @@ contract VaultReader {
             amounts[i * propsLength + 1] = vault.reservedAmounts(token, false);
             amounts[i * propsLength + 2] = vault.globalShortSizes(token);
             amounts[i * propsLength + 3] = vault.globalLongSizes(token);
-            amounts[i * propsLength + 4] = positionManager.maxGlobalShortSizes(token);
-            amounts[i * propsLength + 5] = positionManager.maxGlobalLongSizes(token);
+            amounts[i * propsLength + 4] = vault.maxGlobalShortSizes(token);
+            amounts[i * propsLength + 5] = vault.maxGlobalLongSizes(token);
         }
     }
 
