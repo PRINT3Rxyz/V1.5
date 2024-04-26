@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 interface IFastPriceFeed {
     error FastPriceFeed_OnlyVaultPriceFeed();
+    error FastPriceFeed_InsufficientFee();
 
     function getUpdateFee(bytes[] calldata priceUpdateData) external view returns (uint256 fee);
 

@@ -89,6 +89,7 @@ contract FastPriceFeed is IFastPriceFeed, ISecondaryPriceFeed, Governable {
         uint256 _maxDecreasePositions
     ) external payable onlyUpdater {
         uint256 fee = pyth.getUpdateFee(_priceUpdateData);
+        if (msg.value < fee) revert FastPriceFeed_InsufficientFee();
         pyth.updatePriceFeeds{value: fee}(_priceUpdateData);
 
         if (address(this).balance != 0) {
