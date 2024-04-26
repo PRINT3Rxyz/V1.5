@@ -37,12 +37,12 @@ anvil :; anvil -m 'test test test test test test test test test test test junk' 
 
 NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_KEY) --broadcast
 
-ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
-	NETWORK_ARGS := --rpc-url $(MODE_SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+ifeq ($(findstring --network testnet,$(ARGS)),--network testnet)
+	NETWORK_ARGS := --rpc-url $(MODE_SEPOLIA_RPC_URL) --account testKey --sender 0x02A2012c36644f4e4b36A14EBe13E23c96f4C5b6 --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
 ifeq ($(findstring --network mode,$(ARGS)),--network mode)
-	NETWORK_ARGS := --rpc-url $(MODE_RPC_URL) --private-key $(PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+	NETWORK_ARGS := --rpc-url $(MODE_RPC_URL) --account print3rKey --sender 0x4F6e437f7E90087f7090AcfE967D77ba0B4c7444 --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 endif
 
 deploy:
