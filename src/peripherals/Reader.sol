@@ -107,45 +107,42 @@ contract Reader {
         return balances;
     }
 
-    function getPositions(
-        address _vault,
-        address _account,
-        address[] memory _indexTokens,
-        uint256[] memory _offchainPrices,
-        bool[] memory _isLong
-    ) public view returns (uint256[] memory) {
+    function getPositions(address _vault, address _account, address[] memory _indexTokens, bool[] memory _isLong)
+        public
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory amounts = new uint256[](_indexTokens.length * POSITION_PROPS_LENGTH);
 
-        for (uint256 i; i < _indexTokens.length; i++) {
+        for (uint256 i = 0; i < _indexTokens.length; i++) {
             {
                 (
-                    uint256 _size,
+                    uint256 size,
                     uint256 collateral,
-                    uint256 _averagePrice,
+                    uint256 averagePrice,
                     uint256 entryFundingRate,
-                    ,
                     /* reserveAmount */
+                    ,
                     uint256 realisedPnl,
                     bool hasRealisedProfit,
-                    uint256 _lastIncreasedTime
+                    uint256 lastIncreasedTime
                 ) = IVault(_vault).getPosition(_account, _indexTokens[i], _isLong[i]);
 
-                amounts[i * POSITION_PROPS_LENGTH] = _size;
+                amounts[i * POSITION_PROPS_LENGTH] = size;
                 amounts[i * POSITION_PROPS_LENGTH + 1] = collateral;
-                amounts[i * POSITION_PROPS_LENGTH + 2] = _averagePrice;
+                amounts[i * POSITION_PROPS_LENGTH + 2] = averagePrice;
                 amounts[i * POSITION_PROPS_LENGTH + 3] = entryFundingRate;
                 amounts[i * POSITION_PROPS_LENGTH + 4] = hasRealisedProfit ? 1 : 0;
                 amounts[i * POSITION_PROPS_LENGTH + 5] = realisedPnl;
-                amounts[i * POSITION_PROPS_LENGTH + 6] = _lastIncreasedTime;
+                amounts[i * POSITION_PROPS_LENGTH + 6] = lastIncreasedTime;
             }
 
             uint256 size = amounts[i * POSITION_PROPS_LENGTH];
             uint256 averagePrice = amounts[i * POSITION_PROPS_LENGTH + 2];
             uint256 lastIncreasedTime = amounts[i * POSITION_PROPS_LENGTH + 6];
             if (averagePrice > 0) {
-                (bool hasProfit, uint256 delta) = IVaultPyth(_vault).getDeltaAtPrice(
-                    _offchainPrices[i], _indexTokens[i], size, averagePrice, _isLong[i], lastIncreasedTime
-                );
+                (bool hasProfit, uint256 delta) =
+                    IVault(_vault).getDelta(_indexTokens[i], size, averagePrice, _isLong[i], lastIncreasedTime);
                 amounts[i * POSITION_PROPS_LENGTH + 7] = hasProfit ? 1 : 0;
                 amounts[i * POSITION_PROPS_LENGTH + 8] = delta;
             }

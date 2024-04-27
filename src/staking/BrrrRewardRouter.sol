@@ -18,7 +18,7 @@ contract BrrrRewardRouter is IBrrrRewardRouter, ReentrancyGuard, Governable {
 
     bool public isInitialized;
 
-    address public weth;
+    address public usdc;
 
     address public brrr; // PRINT3R Liquidity Provider token
 
@@ -29,18 +29,14 @@ contract BrrrRewardRouter is IBrrrRewardRouter, ReentrancyGuard, Governable {
     event StakeBrrr(address account, uint256 amount);
     event UnstakeBrrr(address account, uint256 amount);
 
-    receive() external payable {
-        require(msg.sender == weth, "Router: invalid sender");
-    }
-
-    function initialize(address _weth, address _brrr, address _stakedBrrrTracker, address _brrrManager)
+    function initialize(address _usdc, address _brrr, address _stakedBrrrTracker, address _brrrManager)
         external
         override
         onlyGov
     {
         require(!isInitialized, "RewardRouter: already initialized");
         isInitialized = true;
-        weth = _weth;
+        usdc = _usdc;
         brrr = _brrr;
         stakedBrrrTracker = _stakedBrrrTracker;
         brrrManager = _brrrManager;
@@ -91,16 +87,8 @@ contract BrrrRewardRouter is IBrrrRewardRouter, ReentrancyGuard, Governable {
         IRewardTracker(stakedBrrrTracker).claimForAccount(account, account);
     }
 
-    function handleRewards(bool _shouldConvertWethToEth) external override nonReentrant {
+    function handleRewards() external override nonReentrant {
         address account = msg.sender;
-
-        if (_shouldConvertWethToEth) {
-            uint256 wethAmount = IRewardTracker(stakedBrrrTracker).claimForAccount(account, address(this));
-            IWETH(weth).withdraw(wethAmount);
-
-            account.safeTransferETH(wethAmount);
-        } else {
-            IRewardTracker(stakedBrrrTracker).claimForAccount(account, account);
-        }
+        IRewardTracker(stakedBrrrTracker).claimForAccount(account, account);
     }
 }

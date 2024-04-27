@@ -14,5 +14,5 @@ interface IBrrrRewardRouter {
 
     function claim() external;
 
-    function handleRewards(bool _shouldConvertWethToEth) external;
+    function handleRewards() external;
 }

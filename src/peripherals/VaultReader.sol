@@ -41,6 +41,38 @@ contract VaultReader {
         }
     }
 
+    function getVaultTokenInfoV4(address _vault, address _weth, address[] memory _tokens)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256 propsLength = 10;
+
+        IVault vault = IVault(_vault);
+        IVaultPriceFeed priceFeed = IVaultPriceFeed(vault.priceFeed());
+
+        uint256[] memory amounts = new uint256[](_tokens.length * propsLength);
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            address token = _tokens[i];
+            if (token == address(0)) {
+                token = _weth;
+            }
+
+            amounts[i * propsLength] = vault.reservedAmounts(token, false);
+            amounts[i * propsLength + 1] = vault.reservedAmounts(token, true);
+            amounts[i * propsLength + 2] = vault.globalShortSizes(token);
+            amounts[i * propsLength + 3] = vault.globalLongSizes(token);
+            amounts[i * propsLength + 4] = vault.maxGlobalShortSizes(token);
+            amounts[i * propsLength + 5] = vault.maxGlobalLongSizes(token);
+            amounts[i * propsLength + 6] = vault.getMinPrice(token);
+            amounts[i * propsLength + 7] = vault.getMaxPrice(token);
+            amounts[i * propsLength + 8] = priceFeed.getPrimaryPrice(token, false);
+            amounts[i * propsLength + 9] = priceFeed.getPrimaryPrice(token, true);
+        }
+
+        return amounts;
+    }
+
     function validateLiquidationAtPrice(
         uint256 _markPrice,
         address _vault,
